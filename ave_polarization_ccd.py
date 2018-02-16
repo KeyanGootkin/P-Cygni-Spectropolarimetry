@@ -15,7 +15,7 @@ ave_pol = []
 #for each blue file, run through each red file and see if they are the same date
 for bfile in ccdbfiles:
     for rfile in ccdrfiles:
-        if rfile[:len(rfile)-9] == bfile[:len(bfile)-9]:
+        if rfile[:(len(rfile)-10)] == bfile[:(len(bfile)-10)]:
             hdu_r = fits.open(rfile)
             tablehdu_r = hdu_r[1].header
             infohdu_r = hdu_r[0].header

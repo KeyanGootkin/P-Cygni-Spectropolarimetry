@@ -4,6 +4,8 @@ from glob import glob
 import os
 from astropy.io import fits,ascii
 from astropy.stats import LombScargle
+from scipy import stats
+from astropy.table import Table,Column
 
 def Theta(period, times, magnitudes, errors):
     """
@@ -100,3 +102,73 @@ def hybrid_periodogram(times,magnitudes,errors):
     #Finding Menorah (otherwise known as upper-case psi)
     menorah = (2*LS_power)/theta_array
     return period,menorah
+
+
+def polarization(Q,U):
+    Q,U = np.array(Q),np.array(U)
+    polarization = np.sqrt(Q**2+U**2)
+    position_angle = np.degrees(np.arctan2(U,Q))
+    return(polarization,position_angle)
+    
+def easy_bin_mean(x,data,bins_num):
+    """
+    I REALLY DIDN'T LIKE THE FORMAT SO I JUST STOLE SCIPY'S STATS THING BUT CHANGED
+    THE FORMAT SO I COULD STAND IT. ALL CREDIT TO SCIPY"""
+    bin_data, bin_x, binnumber = stats.binned_statistic(x,data,statistic='mean',bins=bins_num)
+    return(bin_x,bin_data)
+
+
+
+def ret_pol_data(txt_file_name,bin_num):
+    
+    table = Table.read(txt_file_name, format = 'ascii',delimiter='\s',data_start=1,names=['Wavelength','Flux','q','u','err'])
+    wavelength = np.array(table["Wavelength"])
+    Q = np.array(table["q"])
+    U = np.array(table["u"])
+    err = np.array(table["err"])
+    flux = table["Flux"]
+    wavelength_bin_edges,bin_Q = easy_bin_mean(wavelength,Q,bin_num)
+    wavelength_bin_edges,bin_U = easy_bin_mean(wavelength,U,bin_num)
+    wavelength_bin_edges,bin_flux = easy_bin_mean(wavelength,flux,bin_num)
+    pol,pos = polarization(bin_Q,bin_U)
+    return(wavelength_bin_edges[1:],bin_flux,pol,pos)
+
+    
+def get_ret_ave_pol(fits_file):
+    hdu = fits.open(fits_file)
+    infohdu = hdu[0].header
+    tablehdu = hdu[1].header
+    ave_pol,ave_err = tablehdu["Ave-pol"],tablehdu["Ave-erro"]
+    obs_time = infohdu["MJD_OBS"]
+    return(obs_time,ave_pol,ave_err)
+    
+def ret_ave_pol_curve(ret_fits_file_list):
+    times_list = []
+    average_pol_list = []
+    average_err_list = []
+    for file in ret_fits_file_list:
+        obs_time,ave_pol,ave_err = get_ret_ave_pol(file)
+        times_list.append(obs_time)
+        average_pol_list.append(ave_pol)
+        average_err_list.append(ave_err)
+    #Sort all of these boys because SOME TIMES DON"T PLAY NICE
+    times_list,average_pol_list,average_err_list = np.array(times_list),np.array(average_pol_list),np.array(average_err_list)
+    times_sort = np.argsort(times_list)
+    times_list = times_list[times_sort]
+    average_pol_list = average_pol_list[times_sort]
+    average_err_list = average_err_list[times_sort]
+    return(times_list,average_pol_list,average_err_list)
+        
+        
+        
+        
+        
+    
+    
+    
+    
+    
+    
+    
+
+

@@ -9,7 +9,7 @@ datadir = 'C:/Users/Keyan/Desktop/Data/P-Cygni/Data/'
 retfiles = glob(datadir+'hpolret*.fits')
 ccdfiles = glob(datadir+'hpolccd*.fits')
 #For every file read in the time, average polarization, and error
-times = []
+'''times = []
 average_pol = []
 average_err = []
 for file in retfiles:
@@ -26,7 +26,8 @@ times,average_pol,average_err = np.array(times),np.array(average_pol),np.array(a
 times_sort = np.argsort(times)
 times = times[times_sort]
 average_pol = average_pol[times_sort]
-average_err = average_err[times_sort]
+average_err = average_err[times_sort]'''
+times,average_pol,average_err = pc.ret_ave_pol_curve(retfiles)
 #Plot average polarization vs. time
 plt.figure(figsize = [10,5])
 plt.errorbar(times,average_pol,yerr=average_err)
