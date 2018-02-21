@@ -46,7 +46,8 @@ pol_period = pol_period[power_sort]
 print(pol_period[len(pol_period)-5:])
 print(pol_power[len(pol_period)-5:])
 #phase fold at best period
-period = pol_period[len(pol_period)-1]
+#period = pol_period[len(pol_period)-1]
+period=130.431612
 phase_time = times%period
 plt.scatter(phase_time,average_pol)
 
