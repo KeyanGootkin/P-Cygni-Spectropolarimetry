@@ -27,7 +27,7 @@ times_sort = np.argsort(times)
 times = times[times_sort]
 average_pol = average_pol[times_sort]
 average_err = average_err[times_sort]'''
-times,average_pol,average_err = pc.ret_ave_pol_curve(retfiles)
+times,average_pol,average_err = pc.ave_pol_curve(retfiles)
 #Plot average polarization vs. time
 plt.figure(figsize = [10,5])
 plt.errorbar(times,average_pol,yerr=average_err)
@@ -50,52 +50,3 @@ print(pol_power[len(pol_period)-5:])
 period=130.431612
 phase_time = times%period
 plt.scatter(phase_time,average_pol)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -60,7 +60,7 @@ plt.show
 
 
 '''
-wavelength,flux,pol,pos = pc.ret_pol_data(file,250)
+wavelength,flux,pol,pos = pc.txt_pol_data(file,250)
 
 astropy_table = Table.read(file, format = 'ascii',delimiter='\s',data_start=1,names=['Wavelength','Flux','q','u','err'])
 
@@ -81,31 +81,13 @@ plt.show()
 
 tables_list = glob(datadir+'hpolret*.txt')
 
-plt.figure(figsize=[15,20])
-lowlim = 4586
-highlim = 4786
-for i in range(len(tables_list)):
-    files = tables_list[i]
-    wavelengthx,fluxx,polx,posx = pc.ret_pol_data(files,250)
-    plt.subplot(3,1,1)
-    plt.plot(wavelengthx,fluxx/np.median(fluxx),label=(files[len(files)-20:len(files)-12]))
-    
-    plt.title("Flux")
-    plt.subplot(3,1,2)
-    plt.plot(wavelengthx,polx,label=(files[len(files)-20:len(files)-12]))
-   
-    plt.title("% Polarization")
-    plt.subplot(3,1,3)
-    plt.plot(wavelengthx,posx,label=(files[len(files)-20:len(files)-12]))
-  
-    plt.title("Position Angle")
-plt.savefig(figdir+'He-(4586-4786).pdf')
+pc.stack_txt_pol_data(tables_list,250,radial_velocity=0,window=[6500,7000])
 
-'''    
-plt.subplot(3,1,2)   
+'''
+plt.subplot(3,1,2)
 for i in range(len(tables_list)):
     files = tables_list[i]
-    wavelengthx,fluxx,polx,posx = pc.ret_pol_data(files,250)
+    wavelengthx,fluxx,polx,posx = pc.txt_pol_data(files,250)
     plt.plot(wavelengthx,polx,label=(files[len(files)-20:len(files)-12]))
 plt.xlim(6450,6650)
 plt.title("% Polarization")
@@ -114,15 +96,8 @@ plt.title("% Polarization")
 plt.subplot(3,1,3)
 for i in range(len(tables_list)):
     files = tables_list[i]
-    wavelengthx,fluxx,polx,posx = pc.ret_pol_data(files,250)
+    wavelengthx,fluxx,polx,posx = pc.txt_pol_data(files,250)
     plt.plot(wavelengthx,posx,label=(files[len(files)-20:len(files)-12]))
 plt.xlim(6450,6650)
 plt.title("Position Angle")
 '''
-
-
-
-
-
-
-
