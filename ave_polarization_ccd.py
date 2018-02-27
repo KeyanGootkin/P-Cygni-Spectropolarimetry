@@ -16,11 +16,10 @@ plt.show()
 rperiod,rpower=pc.hybrid_periodogram(rtimes,rpol,rerr)
 pc.make_periodogram_figure(rperiod,rpower)
 plt.show()
-best_rperiod_ind = np.argsort(rpower)
-best_rperiod=(rperiod[best_rperiod_ind])[0]
+best_rperiod= pc.find_best_period(rperiod,rpower)
 pc.plot_phase_time(rtimes,rpol,best_rperiod)
 plt.show()
-print(best_rperiod)
+
 
 #then the blue
 btimes,bpol,berr=pc.ccd_ave_pol_curve(bfiles)
@@ -29,8 +28,6 @@ plt.show()
 bperiod,bpower=pc.hybrid_periodogram(btimes,bpol,berr)
 pc.make_periodogram_figure(bperiod,bpower)
 plt.show()
-best_bperiod_ind=np.argsort(bpower)
-best_bperiod=(bperiod[best_bperiod_ind])[0]
+best_bperiod=pc.find_best_period(bperiod,bpower)
 pc.plot_phase_time(btimes,bpol,best_bperiod)
 plt.show()
-print(best_bperiod)

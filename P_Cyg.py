@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import cm
 from glob import glob
 import os
 from astropy.io import fits,ascii
@@ -17,14 +18,14 @@ def dedopler(raw_wavelength,radial_velocity):
 
     Parameters
     ----------
-    raw_wavelength: numpy array
+    raw_wavelength : numpy array
         array of observed wavelengths which have some doppler shift.
 
-    radial_velocity: float
+    radial_velocity : float
         the radial velocity of the object given in km/s
 
     Returns
-    ----------
+    -------
     calibrated_wavelength : numpy array
         array of wavelengths which have been corrected to account for doppler
         shift caused by the target's radial velocity
@@ -33,7 +34,7 @@ def dedopler(raw_wavelength,radial_velocity):
         return(raw_wavelength)
     else:
         z=radial_velocity/(3*10**5)
-        calibrated_wavelength = raw_wavelength*(1+z)
+        calibrated_wavelength = raw_wavelength/(1+z)
         return(calibrated_wavelength)
 
 def Theta(period, times, magnitudes, errors):
@@ -86,7 +87,6 @@ def Theta(period, times, magnitudes, errors):
     Theta = top_sum/(bottom_sum*w_i_sum)
     return(Theta)
 
-
 def hybrid_periodogram(times,magnitudes,errors):
     """
     computes the power or periodicity (a hybrid method which uses both
@@ -132,35 +132,44 @@ def hybrid_periodogram(times,magnitudes,errors):
     menorah = (2*LS_power)/theta_array
     return period,menorah
 
-def make_figure(x,y,err,title):
+def find_best_period(period,power):
+    best_period_ind = np.argsort(power)
+    best_period=(period[best_period_ind])[len(period)-1]
+    return(best_period)
+
+def make_figure(x,y,err,title="",axis=["",""]):
     """
-    Creates an errorbar figure for a single filter (does not work for
-    tables with multiple filters) of Magnitude vs Time (in minutes)
+    Creates a pretty errorbar figure
 
     Parameters
     ---------
-    data_table : Table
-        the table containing the info for the figure
+    x : list
+        data for the x axis of the plot
 
-    title : STRING
-        name of the figure
+    y : list
+        data for the y axis of the plot
+
+    err : list
+        list of errors for the data on the y axis
+
+    title : string
+        what you would like the title of the plot to be.
+
     """
-    #Crank up the size of the figure, for beauty purposes.
-    plt.figure(figsize=[10,5])
+
     #Creates actual plot
     plt.errorbar(x,y,yerr=err)
     #Sets the title of the plot
     plt.title(title, size = 23, fontname='Times New Roman')
     #Labels the x and y axis.
-    plt.gca().set_xlabel('Time [MJD]', size=17, fontname='Times New Roman')
-    plt.ylabel('Polarization', size = 17, fontname='Times New Roman')
+    plt.gca().set_xlabel(axis[0], size=17, fontname='Times New Roman')
+    plt.ylabel(axis[1], size = 17, fontname='Times New Roman')
     #Makes the axis look nice (Thank you Cayenne)
     plt.xticks(fontsize = 15, fontname='Times New Roman', color = 'darkslategrey')
     plt.yticks(fontsize = 15,fontname='Times New Roman', color = 'darkslategrey')
     #Creates a grid on the plot to make it more readable
     plt.grid()
     return True
-
 
 def make_periodogram_figure(period,power):
     """
@@ -190,7 +199,22 @@ def make_periodogram_figure(period,power):
     plt.grid()
     return True
 
-def make_scatter(x,y,title):
+def make_scatter(x,y,title=""):
+    """
+    Creates a pretty scatter plot
+
+    Parameters
+    ---------
+    x : list
+        data for the x axis of the plot
+
+    y : list
+        data for the y axis of the plot
+
+    title : string
+        what you would like the title of the plot to be.
+
+    """
     #Crank up the size of the figure, for beauty purposes.
     plt.figure(figsize=[10,5])
     #Creates actual plot
@@ -204,34 +228,103 @@ def make_scatter(x,y,title):
     plt.grid()
     return True
 
-
 def plot_phase_time(times,variable,period):
+    """
+    takes a set of time-series data, phase-folds it, then plots it as a scatter
+    plot of the variable vs. phase.
+
+    Parameters
+    ---------
+    times : list
+        time data for the x axis of the plot
+
+    variable : list
+        data for the y axis of the plot
+
+    period : float
+        The period which you would like to fold the data by.
+    """
     phase_times = (times/period)%1
-    make_scatter(phase_times,variable,'Time-Folded - Period='+str(period))
+    make_scatter(phase_times,variable,title='Time-Folded - Period='+str(period))
     plt.show()
     return True
 
-
 def polarization(Q,U):
+    """
+    computes % Polarization and Position angle based on lists of the stokes
+    parameters Q and U.
+
+    Parameters
+    ---------
+    Q : list
+        A list of the stokes parameter Q.
+
+    U : list
+        A list of the stokes parameter U.
+
+
+    Returns
+    -------
+    polarization : numpy array
+        An array of % polarizations
+
+    position_angle : numpy array
+        An array of position angles
+    """
     Q,U = np.array(Q),np.array(U)
     polarization = np.sqrt(Q**2+U**2)
     position_angle = np.degrees(np.arctan2(U,Q))
     return(polarization,position_angle)
 
-
 def easy_bin_mean(x,data,bins_num):
     """
-    I REALLY DIDN'T LIKE THE FORMAT SO I JUST STOLE SCIPY'S STATS THING BUT CHANGED
-    THE FORMAT SO I COULD STAND IT. ALL CREDIT TO SCIPY"""
+    This takes data and bins it, this is literally just astropy's binned_statistic
+    but in a format that is easier to understand and use.
+
+    Parameters
+    ---------
+    x : list
+        x axis to be binned.
+
+    data : list
+        A list of data to be grouped together and binned.
+
+    bins_num : integer
+        The number of bins that you wish to have.
+
+
+    Returns
+    -------
+    bin_x : list
+        the bin edges in the x data
+
+    bin_data : list
+        List of data which has been grouped into bins and averaged.
+    """
     bin_data, bin_x, binnumber = stats.binned_statistic(x,data,statistic='mean',bins=bins_num)
     return(bin_x,bin_data)
 
+def match_rb_txt_files(rtxtfiles,btxtfiles):
+    matched_files = []
+    for r in rtxtfiles:
+        for b in btxtfiles:
+            if r[len(r)-21:len(r)-13] == b[len(b)-21:len(b)-13]:
+                matched_files.append([r,b])
+    return(matched_files)
+
+def match_rb_fits_files(rfitsfiles,bfitsfiles):
+    matched_files = []
+    for r in rfitsfiles:
+        for b in bfitsfiles:
+            if r[len(r)-17:len(r)-9] == b[len(b)-17:len(b)-9]:
+                matched_files.append([r,b])
+    return(matched_files)
+
 '''FLUX, POLARIZATION AND POSITION ANGLE FIGURES'''
 
-def txt_pol_data(txt_file_name,bin_num,radial_velocity=0,window=[3000,8000]):
+def txt_pol_data(txt_file_name,bin_num,radial_velocity=0):
     #extract all info from txt file
-    table = ascii.read(txt_file_name, delimiter='\s',encoding='utf8',
-                       data_start=1,names=['Wavelength','Flux','q','u','err'])
+    table = np.genfromtxt(txt_file_name,skip_header=1,names=['Wavelength','Flux','q','u','err'])
     wavelength = np.array(table["Wavelength"])
     Q = np.array(table["q"])
     U = np.array(table["u"])
@@ -247,21 +340,92 @@ def txt_pol_data(txt_file_name,bin_num,radial_velocity=0,window=[3000,8000]):
     wavelength = dedopler(wavelength,radial_velocity)
     return(wavelength_bin_edges[1:],bin_flux,pol,pos)
 
-def stack_txt_pol_data(txt_file_name_list,bin_num,radial_velocity=0,window=[3000,8000]):
+def stack_txt_pol_data(txt_file_list,fits_file_list,bin_num,radial_velocity=0,window=[3000,8000],vert_line=False):
+    all_wavelength = []
+    all_flux = []
+    all_pol = []
+    all_pos = []
+    all_MJD = []
+    cmap = cm.get_cmap('inferno')
     plt.figure(figsize=[15,20])
-    for files in txt_file_name_list:
-        wavelength,flux,pol,pos = txt_pol_data(files,bin_num)
-        wavelength = dedopler(np.array(wavelength),radial_velocity)
+    for i in range(len(txt_file_list)):
+        txt,fits = txt_file_list[i],fits_file_list[i]
+        wavelength,flux,pol,pos = txt_pol_data(txt,bin_num)
+        wavelength = dedopler(wavelength,radial_velocity)
+        if fits[len(fits)-26:len(fits)-23] == 'ret':
+            MJD,ave_pol,ave_err = get_ave_pol(fits)
+        elif fits[len(fits)-27:len(fits)-24] == 'ccd':
+            MJD,ave_pol,ave_err = get_ccd_ave_pol(fits)
+        else:
+            print("Sorry, I can't tell if this is a ccd image or a ret image.")
+            break
+        all_wavelength.append(wavelength)
+        all_flux.append(flux)
+        all_pol.append(pol)
+        all_pos.append(pos)
+        all_MJD.append(MJD)
+    for wavelength,flux,pol,pos,MJD in zip(all_wavelength,all_flux,all_pol,all_pos,all_MJD):
         plt.subplot(3,1,1)
-        plt.plot(wavelength,flux/np.median(flux),label=(files[len(files)-20:len(files)-12]))
+        plt.plot(wavelength,flux/np.median(flux),label=(txt[len(txt)-20:len(txt)-12]),c=cmap((MJD-min(all_MJD))/(max(all_MJD)-min(all_MJD))))
+        plt.plot([vert_line,vert_line],[0,6])
         plt.title("Flux")
         plt.xlim(window[0],window[1])
         plt.subplot(3,1,2)
-        plt.plot(wavelength,pol,label=(files[len(files)-20:len(files)-12]))
+        plt.plot(wavelength,pol,label=(txt[len(txt)-20:len(txt)-12]),c=cmap((MJD-min(all_MJD))/(max(all_MJD)-min(all_MJD))))
+        plt.plot([vert_line,vert_line],[min(pol),max(pol)])
         plt.title("% Polarization")
         plt.xlim(window[0],window[1])
         plt.subplot(3,1,3)
-        plt.plot(wavelength,pos,label=(files[len(files)-20:len(files)-12]))
+        plt.plot(wavelength,pos,label=(txt[len(txt)-20:len(txt)-12]),c=cmap((MJD-min(all_MJD))/(max(all_MJD)-min(all_MJD))))
+        plt.plot([vert_line,vert_line],[min(pos),max(pos)])
+        plt.title("Position Angle")
+        plt.xlim(window[0],window[1])
+
+def stack_ccd_txt_pol_data(txt_file_list,fits_file_list,bin_num,radial_velocity=0,window=[2800,11000],vert_line=False):
+    all_wavelength = []
+    all_flux = []
+    all_pol = []
+    all_pos = []
+    all_MJD = []
+    cmap = cm.get_cmap('viridis')
+    plt.figure(figsize=[15,20])
+    for i in range(len(txt_file_list)):
+        txt,fits = txt_file_list[i],fits_file_list[i]
+        wavelength,flux,pol,pos = txt_pol_data(txt,bin_num)
+        wavelength = dedopler(wavelength,radial_velocity)
+        if fits[len(fits)-26:len(fits)-23] == 'ret':
+            MJD,ave_pol,ave_err = get_ave_pol(fits)
+        elif fits[len(fits)-27:len(fits)-24] == 'ccd':
+            MJD,ave_pol,ave_err = get_ccd_ave_pol(fits)
+        else:
+            print("Sorry, I can't tell if this is a ccd image or a ret image.")
+            break
+        all_wavelength.append(wavelength)
+        all_flux.append(flux)
+        all_pol.append(pol)
+        all_pos.append(pos)
+        all_MJD.append(MJD)
+    both_color_wave,r_color_wave,b_color_wave = [],[],[]
+    both_color_flux,r_color_flux,b_color_flux = [],[],[]
+    both_color_pol,r_color_pol,b_color_pol = [],[],[]
+    both_color_pos,r_color_pos,b_color_pos = [],[],[]
+    both_color_MJD,r_color_MJD,b_color_MJD = [],[],[]
+
+
+    for wavelength,flux,pol,pos,MJD in zip(all_wavelength,all_flux,all_pol,all_pos,all_MJD):
+        plt.subplot(3,1,1)
+        plt.plot(wavelength,flux,label=(txt[len(txt)-20:len(txt)-12]),c=cmap((MJD-min(all_MJD))/(max(all_MJD)-min(all_MJD))))
+        plt.plot([vert_line,vert_line],[0,6e-12])
+        plt.title("Flux")
+        plt.xlim(window[0],window[1])
+        plt.subplot(3,1,2)
+        plt.plot(wavelength,pol,label=(txt[len(txt)-20:len(txt)-12]),c=cmap((MJD-min(all_MJD))/(max(all_MJD)-min(all_MJD))))
+        plt.plot([vert_line,vert_line],[min(pol),max(pol)])
+        plt.title("% Polarization")
+        plt.xlim(window[0],window[1])
+        plt.subplot(3,1,3)
+        plt.plot(wavelength,pos,label=(txt[len(txt)-20:len(txt)-12]),c=cmap((MJD-min(all_MJD))/(max(all_MJD)-min(all_MJD))))
+        plt.plot([vert_line,vert_line],[min(pos),max(pos)])
         plt.title("Position Angle")
         plt.xlim(window[0],window[1])
 
@@ -274,6 +438,15 @@ def get_ave_pol(fits_file):
     ave_pol,ave_err = tablehdu["Ave-pol"],tablehdu["Ave-erro"]
     obs_time = infohdu["MJD_OBS"]
     return(obs_time,ave_pol,ave_err)
+
+def get_fits_table(fits_file):
+    hdu = fits.open(fits_file)
+    table = hdu[1].data
+    wavelength = table['wavelength'][0]
+    Q = table['q'][0]
+    U = table['u'][0]
+    err = table['error']
+    return(wavelength,Q,U,err)
 
 def get_ccd_ave_pol(fits_file):
     hdu = fits.open(fits_file)
@@ -320,3 +493,97 @@ def ccd_ave_pol_curve(fits_file_list):
     average_pol_list = average_pol_list[times_sort]
     average_err_list = average_err_list[times_sort]
     return(times_list,average_pol_list,average_err_list)
+
+def calculate_average_polarization_ret(ret_fits_file_list):
+    times = []
+    ave_pol_list = []
+    ave_pos_list = []
+    ave_err_list = []
+    for ret in ret_fits_file_list:
+        obs_time,ave_pol,ave_err = get_ave_pol(ret)
+        wavelength,q,u,err = get_fits_table(ret)
+        pol,pos = polarization(q,u)
+        good_ind = []
+        for i in wavelength:
+            if i >= 4000 and i <= 7000:
+                good_ind.append(True)
+            else:
+                good_ind.append(False)
+        good_pol,good_pos = pol[good_ind],pos[good_ind]
+        mean_pol = np.mean(good_pol)
+        mean_pos = np.mean(good_pos)
+        times.append(obs_time)
+        ave_pol_list.append(mean_pol)
+        ave_pos_list.append(mean_pos)
+        ave_err_list.append(ave_err)
+    times,ave_pol_list,ave_pos_list,ave_err_list = np.array(times),np.array(ave_pol_list),np.array(ave_pos_list),np.array(ave_err_list)
+    times_sort = np.argsort(times)
+    times = times[times_sort]
+    ave_pos_list = ave_pos_list[times_sort]
+    ave_pol_list = ave_pol_list[times_sort]
+    ave_err_list = ave_err_list[times_sort]
+    return(times,ave_pol_list,ave_pos_list,ave_err_list)
+
+def calculate_average_polarization_ccd(ccd_fits_file_list):
+    times = []
+    ave_pol_list = []
+    ave_pos_list = []
+    ave_err_list = []
+    for ccd in ccd_fits_file_list:
+        obs_time,ave_pol,ave_err = get_ccd_ave_pol(ccd)
+        wavelength,q,u,err = get_fits_table(ccd)
+        pol,pos = polarization(q,u)
+        good_ind = []
+        for i in wavelength:
+            if i >= 4000 and i <= 7000:
+                good_ind.append(True)
+            else:
+                good_ind.append(False)
+
+        good_pol,good_pos = pol[good_ind],pos[good_ind]
+        mean_pol = np.mean(good_pol)
+        mean_pos = np.mean(good_pos)
+        times.append(obs_time)
+        ave_pol_list.append(mean_pol)
+        ave_pos_list.append(mean_pos)
+        ave_err_list.append(ave_err)
+    times,ave_pol_list,ave_pos_list,ave_err_list = np.array(times),np.array(ave_pol_list),np.array(ave_pos_list),np.array(ave_err_list)
+    times_sort = np.argsort(times)
+    times = times[times_sort]
+    ave_pos_list = ave_pos_list[times_sort]
+    ave_pol_list = ave_pol_list[times_sort]
+    ave_err_list = ave_err_list[times_sort]
+    return(times,ave_pol_list,ave_pos_list,ave_err_list)
+
+"""MEDIANING ALL OF THE THINGS"""
+
+def get_all_fpp(txt_file_list,fits_file_list,bin_num,radial_velocity=0):
+    all_wavelength = []
+    all_flux = []
+    all_pol = []
+    all_pos = []
+    for txt,fits in zip(txt_file_list,fits_file_list):
+        wavelength,flux,pol,pos = txt_pol_data(txt,bin_num)
+        wavelength = dedopler(wavelength,radial_velocity)
+        all_wavelength.append(wavelength)
+        all_flux.append(flux)
+        all_pol.append(pol)
+        all_pos.append(pos)
+    return(all_wavelength,all_flux,all_pol,all_pos)
+
+def median_flux_pol_pos(txt_file_list,fits_file_list,bin_num,radial_velocity=0):
+    all_wavelength,all_flux,all_pol,all_pos = get_all_fpp(txt_file_list,fits_file_list,bin_num,radial_velocity=radial_velocity)
+    interp_flux = []
+    interp_pol = []
+    interp_pos = []
+    for i in range(1,len(all_wavelength)):
+        interpolated_flux = np.interp(all_wavelength[0],all_wavelength[i],all_flux[i])
+        interp_flux.append(interpolated_flux)
+        interpolated_pol = np.interp(all_wavelength[0],all_wavelength[i],all_pol[i])
+        interp_pol.append(interpolated_pol)
+        interpolated_pos = np.interp(all_wavelength[0],all_wavelength[i],all_pos[i])
+        interp_pos.append(interpolated_pos)
+    median_flux = np.median(np.array(interp_flux),axis=0)
+    median_pol = np.median(np.array(interp_pol),axis=0)
+    median_pos = np.median(np.array(interp_pos),axis=0)
+    return(all_wavelength[0],median_flux,median_pol,median_pos)
