@@ -11,6 +11,54 @@ from astropy.table import Table, Column
 '''TOOLS'''
 
 
+def sub_mean(list):
+    list = np.array(list)
+    subbed_list = list - np.mean(list, axis=0)
+    return(subbed_list)
+
+
+def bin_errors(errors, wavelength, wavelength_bin_edges):
+    binned_errors = []
+    # For loop cycles through each bin edge
+    for i in range(len(wavelength_bin_edges) - 1):
+        # the lower edge of each region in which to calculate error
+        low = wavelength_bin_edges[i]
+        # if the next edge is not the last edge, then that next edge is the upper limit
+        if i + 1 <= len(wavelength_bin_edges) - 1:
+            high = wavelength_bin_edges[i + 1]
+        # If the next edge is the last one, or greater (somehow), then the last one is the upper limit
+        # This protects against trying to make the upper limit beyond the range of the list if the lower limit is set as the last item
+        else:
+            high = wavelength_bin_edges[len(wavelength_bin_edges) - 1]
+        temp_err_storage = []
+        # For loop cycles through each individual wavelength measurement
+        for x in range(len(wavelength)):
+            # If that wavelength is between the low and high (low inclusive), add the corresponding error measurement to the temp err temp_err_storage
+            if wavelength[x] >= low and wavelength[x] < high:
+                temp_err_storage.append(errors[x])
+        # Take everything in temp storage, and add the sqrt of the sum of the squares to the binned bin_errors
+        # This is the error measurement for one bin
+        binned_errors.append(
+            (np.sum(np.array(temp_err_storage)**2) / len(temp_err_storage))**0.5)
+    # Return the list of errors for each binned region.
+    return(binned_errors)
+
+
+def ls_false_alarm(period, power):
+    return(True)
+
+
+def error_of_median(all_err):
+    median_err = (1.253 * ((sum(np.array(all_err)**2))**0.5)) / \
+        np.sqrt(len(all_err))
+    return(median_err)
+
+
+def position_angle_error(pol, err):
+    paerr = (err / pol) * (90 / np.pi)
+    return(paerr)
+
+
 def dedopler(raw_wavelength, radial_velocity):
     """
     This function takes an array of wavelengths and returns an array of wavelengths
@@ -90,7 +138,7 @@ def Theta(period, times, magnitudes, errors):
     return(Theta)
 
 
-def hybrid_periodogram(times, magnitudes, errors):
+def hybrid_periodogram(times, magnitudes, errors, give_ls=False):
     """
     computes the power or periodicity (a hybrid method which uses both
     the Lomb-Scargle method and the Laffler Kinnman method) of a set of
@@ -122,7 +170,8 @@ def hybrid_periodogram(times, magnitudes, errors):
 
     """
     # Lomb-Scargle
-    LS_frequency, LS_power = LombScargle(times, magnitudes).autopower()
+    LS = LombScargle(times, magnitudes)
+    LS_frequency, LS_power = LS.autopower()
     # Converts frequency to period
     period = 1 / LS_frequency
     # Laffler-Kinman
@@ -133,7 +182,10 @@ def hybrid_periodogram(times, magnitudes, errors):
     theta_array = np.array(theta_list)
     # Finding Menorah (otherwise known as upper-case psi)
     menorah = (2 * LS_power) / theta_array
-    return period, menorah
+    if give_ls == True:
+        return(period, menorah, LS)
+    else:
+        return period, menorah
 
 
 def find_best_period(period, power):
@@ -287,7 +339,7 @@ def polarization(Q, U):
     return(polarization, position_angle)
 
 
-def easy_bin_mean(x, data, bins_num):
+def easy_bin_mean(x, data, bins_num, type='mean'):
     """
     This takes data and bins it, this is literally just astropy's binned_statistic
     but in a format that is easier to understand and use.
@@ -312,8 +364,14 @@ def easy_bin_mean(x, data, bins_num):
     bin_data : list
         List of data which has been grouped into bins and averaged.
     """
-    bin_data, bin_x, binnumber = stats.binned_statistic(
-        x, data, statistic='mean', bins=bins_num)
+    if type == 'mean':
+        bin_data, bin_x, binnumber = stats.binned_statistic(
+            x, data, statistic='mean', bins=bins_num)
+    elif type == 'errors':
+        bin_data, bin_x, binnumber = stats.binned_statistic(
+            x, data, statistic=bin_error(data), bins=bins_num)
+    else:
+        print("ERROR: the function easy_bin_mean has not been passed a valid type.")
     return(bin_x, bin_data)
 
 
@@ -353,12 +411,31 @@ def txt_pol_data(txt_file_name, bin_num, radial_velocity=0):
     wavelength_bin_edges, bin_Q = easy_bin_mean(wavelength, Q, bin_num)
     wavelength_bin_edges, bin_U = easy_bin_mean(wavelength, U, bin_num)
     wavelength_bin_edges, bin_flux = easy_bin_mean(wavelength, flux, bin_num)
-    wavelength_bin_edges, bin_err = easy_bin_mean(wavelength, err, bin_num)
+    bin_err = bin_errors(err, wavelength, wavelength_bin_edges)
     # calculate polarization and position angle
     pol, pos = polarization(bin_Q, bin_U)
     # get rid of doppler shift
     wavelength = dedopler(wavelength, radial_velocity)
     return(wavelength_bin_edges[1:], bin_flux, pol, pos, bin_err)
+
+
+def txt_QU_data(txt_file_name, bin_num, radial_velocity=0):
+    # extract all info from txt file
+    table = np.genfromtxt(txt_file_name, skip_header=1, names=[
+                          'Wavelength', 'Flux', 'q', 'u', 'err'])
+    wavelength = np.array(table["Wavelength"])
+    Q = np.array(table["q"])
+    U = np.array(table["u"])
+    err = np.array(table["err"])
+    flux = table["Flux"]
+    # bin up all of the data
+    wavelength_bin_edges, bin_Q = easy_bin_mean(wavelength, Q, bin_num)
+    wavelength_bin_edges, bin_U = easy_bin_mean(wavelength, U, bin_num)
+    wavelength_bin_edges, bin_flux = easy_bin_mean(wavelength, flux, bin_num)
+    bin_err = bin_errors(err, wavelength, wavelength_bin_edges)
+    # get rid of doppler shift
+    wavelength = dedopler(wavelength, radial_velocity)
+    return(wavelength_bin_edges[1:], bin_flux, bin_Q, bin_U, bin_err)
 
 
 def stack_txt_pol_data(txt_file_list, fits_file_list, bin_num, radial_velocity=0, window=[3000, 8000], vert_line=False):
@@ -486,28 +563,28 @@ def vert_stack_ccd_txt_pol_data(txt_file_list, fits_file_list, bin_num, radial_v
     both_color_pol, r_color_pol, b_color_pol = [], [], []
     both_color_pos, r_color_pos, b_color_pos = [], [], []
     both_color_MJD, r_color_MJD, b_color_MJD = [], [], []
-    i=0
+    i = 0
     plt.figure(figsize=[15, 20])
     for wavelength, flux, pol, pos, MJD in zip(all_wavelength, all_flux, all_pol, all_pos, all_MJD):
         plt.subplot(3, 1, 1)
-        plt.plot(wavelength, flux + ((i*10**-10)/3), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
+        plt.plot(wavelength, flux + ((i * 10**-10) / 3), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
             (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
         plt.plot([vert_line, vert_line], [0, 6e-12])
         plt.title("Flux")
         plt.xlim(window[0], window[1])
         plt.subplot(3, 1, 2)
-        plt.plot(wavelength, pol + (i/10), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
+        plt.plot(wavelength, pol + (i / 10), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
             (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
         plt.plot([vert_line, vert_line], [min(pol), max(pol)])
         plt.title("% Polarization")
         plt.xlim(window[0], window[1])
         plt.subplot(3, 1, 3)
-        plt.plot(wavelength, pos+(5*i), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
+        plt.plot(wavelength, pos + (5 * i), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
             (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
         plt.plot([vert_line, vert_line], [min(pos), max(pos)])
         plt.title("Position Angle")
         plt.xlim(window[0], window[1])
-        i+=1
+        i += 1
 
 
 '''AVERAGE POLARIZATION CURVES'''
@@ -615,6 +692,9 @@ def calculate_average_polarization_ret(ret_fits_file_list):
     return(times, ave_pol_list, ave_pos_list, ave_err_list)
 
 
+"""THIS NEEDS TO BE CHANGED, BOUNDS ARE WRONG"""
+
+
 def calculate_average_polarization_ccd(ccd_fits_file_list):
     times = []
     ave_pol_list = []
@@ -668,7 +748,25 @@ def get_all_fpp(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
     return(all_wavelength, all_flux, all_pol, all_pos, all_err)
 
 
+def get_all_QU(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+    all_wavelength = []
+    all_flux = []
+    all_Q = []
+    all_U = []
+    all_err = []
+    for txt, fits in zip(txt_file_list, fits_file_list):
+        wavelength, flux, Q, U, err = txt_QU_data(txt, bin_num)
+        wavelength = dedopler(wavelength, radial_velocity)
+        all_wavelength.append(wavelength)
+        all_flux.append(flux)
+        all_Q.append(Q)
+        all_U.append(U)
+        all_err.append(err)
+    return(all_wavelength, all_flux, all_Q, all_U, all_err)
+
+
 def median_flux_pol_pos(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+
     all_wavelength, all_flux, all_pol, all_pos, all_err = get_all_fpp(
         txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
     interp_flux = []
@@ -691,5 +789,120 @@ def median_flux_pol_pos(txt_file_list, fits_file_list, bin_num, radial_velocity=
     median_flux = np.median(np.array(interp_flux), axis=0)
     median_pol = np.median(np.array(interp_pol), axis=0)
     median_pos = np.median(np.array(interp_pos), axis=0)
-    median_err = np.median(np.array(interp_err), axis=0)
+    median_err = error_of_median(all_err)
+    return(all_wavelength[0], median_flux, median_pol, median_pos, median_err)
+
+
+def median_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+    all_wavelength, all_flux, all_Q, all_U, all_err = get_all_QU(
+        txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
+    interp_flux = []
+    interp_Q = []
+    interp_U = []
+    interp_err = []
+    for i in range(1, len(all_wavelength)):
+        interpolated_flux = np.interp(
+            all_wavelength[0], all_wavelength[i], all_flux[i])
+        interp_flux.append(interpolated_flux)
+        interpolated_Q = np.interp(
+            all_wavelength[0], all_wavelength[i], all_Q[i])
+        interp_Q.append(interpolated_Q)
+        interpolated_U = np.interp(
+            all_wavelength[0], all_wavelength[i], all_U[i])
+        interp_U.append(interpolated_U)
+        interpolated_err = np.interp(
+            all_wavelength[0], all_wavelength[i], all_err[i])
+        interp_err.append(interpolated_err)
+    median_flux = np.median(np.array(interp_flux), axis=0)
+    median_Q = np.median(np.array(interp_Q), axis=0)
+    median_U = np.median(np.array(interp_U), axis=0)
+    median_err = error_of_median(all_err)
+    return(all_wavelength[0], median_flux, median_Q, median_U, median_err)
+
+
+def mean_flux_pol_pos(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+    all_wavelength, all_flux, all_pol, all_pos, all_err = get_all_fpp(
+        txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
+    interp_flux = []
+    interp_pol = []
+    interp_pos = []
+    interp_err = []
+    for i in range(1, len(all_wavelength)):
+        interpolated_flux = np.interp(
+            all_wavelength[0], all_wavelength[i], all_flux[i])
+        interp_flux.append(interpolated_flux)
+        interpolated_pol = np.interp(
+            all_wavelength[0], all_wavelength[i], all_pol[i])
+        interp_pol.append(interpolated_pol)
+        interpolated_pos = np.interp(
+            all_wavelength[0], all_wavelength[i], all_pos[i])
+        interp_pos.append(interpolated_pos)
+        interpolated_err = np.interp(
+            all_wavelength[0], all_wavelength[i], all_err[i])
+        interp_err.append(interpolated_err)
+    mean_flux = np.mean(np.array(interp_flux), axis=0)
+    mean_pol = np.mean(np.array(interp_pol), axis=0)
+    mean_pos = np.mean(np.array(interp_pos), axis=0)
+    mean_err = np.sqrt(np.sum(np.array(all_err)**2, axis=0) / len(all_err))
+    return(all_wavelength[0], mean_flux, mean_pol, mean_pos, mean_err)
+
+
+def mean_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+    all_wavelength, all_flux, all_Q, all_U, all_err = get_all_QU(
+        txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
+    interp_flux = []
+    interp_Q = []
+    interp_U = []
+    interp_err = []
+    for i in range(1, len(all_wavelength)):
+        interpolated_flux = np.interp(
+            all_wavelength[0], all_wavelength[i], all_flux[i])
+        interp_flux.append(interpolated_flux)
+        interpolated_Q = np.interp(
+            all_wavelength[0], all_wavelength[i], all_Q[i])
+        interp_Q.append(interpolated_Q)
+        interpolated_U = np.interp(
+            all_wavelength[0], all_wavelength[i], all_U[i])
+        interp_U.append(interpolated_U)
+        interpolated_err = np.interp(
+            all_wavelength[0], all_wavelength[i], all_err[i])
+        interp_err.append(interpolated_err)
+    mean_flux = np.mean(np.array(interp_flux), axis=0)
+    mean_Q = np.mean(np.array(interp_Q), axis=0)
+    mean_U = np.mean(np.array(interp_U), axis=0)
+    mean_err = np.sqrt(np.sum(np.array(all_err)**2, axis=0) / len(all_err))
+    return(all_wavelength[0], mean_flux, mean_Q, mean_U, mean_err)
+
+
+def fpp_sub_mean(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+    all_wavelength, all_flux, all_Q, all_U, all_err = get_all_QU(
+        txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
+    all_Q = sub_mean(all_Q)
+    all_U = sub_mean(all_U)
+    all_pol, all_pos = [],[]
+    for q,u in zip(all_Q,all_U):
+        pol,pos = polarization(q,u)
+        all_pol.append(pol)
+        all_pos.append(pos)
+    interp_flux = []
+    interp_pol = []
+    interp_pos = []
+    interp_err = []
+    for i in range(1, len(all_wavelength)):
+        interpolated_flux = np.interp(
+            all_wavelength[0], all_wavelength[i], all_flux[i])
+        interp_flux.append(interpolated_flux)
+        interpolated_pol = np.interp(
+            all_wavelength[0], all_wavelength[i], all_pol[i])
+        interp_pol.append(interpolated_pol)
+        interpolated_pos = np.interp(
+            all_wavelength[0], all_wavelength[i], all_pos[i])
+        interp_pos.append(interpolated_pos)
+        interpolated_err = np.interp(
+            all_wavelength[0], all_wavelength[i], all_err[i])
+        interp_err.append(interpolated_err)
+    median_flux = np.median(np.array(interp_flux), axis=0)
+    median_pol = np.median(np.array(interp_pol), axis=0)
+    median_pos = np.median(np.array(interp_pos), axis=0)
+    median_err = error_of_median(all_err)
     return(all_wavelength[0], median_flux, median_pol, median_pos, median_err)

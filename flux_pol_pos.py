@@ -14,7 +14,6 @@ retfitsfiles = glob(datadir + 'hpolret*.fits')
 allfitsfiles = bfitsfiles + rfitsfiles + retfitsfiles
 alltxtfiles = btxtfiles + rtxtfiles + rettxtfiles
 
-vert_line = 4850
 
 pc.vert_stack_ccd_txt_pol_data(rtxtfiles, rfitsfiles, 250, radial_velocity=-8.9,window=[5000,11000])
 plt.show()
@@ -28,9 +27,12 @@ plt.show()
 pc.stack_ccd_txt_pol_data(alltxtfiles,allfitsfiles,250,radial_velocity=-8.9,window=[3000,11000])
 plt.show()
 
-bwave,bflux,bpol,bpos,berr = pc.median_flux_pol_pos(btxtfiles,bfitsfiles,250,radial_velocity=-8.9)
-rwave,rflux,rpol,rpos,rerr = pc.median_flux_pol_pos(rtxtfiles,rfitsfiles,250,radial_velocity=-8.9)
-plt.figure(figsize=[15,20])
+bwave,bflux,bpol,bpos,berr = pc.median_flux_pol_pos(btxtfiles,bfitsfiles,1000,radial_velocity=-8.9)
+bpaerr = pc.position_angle_error(bpol,berr)
+print(bpaerr)
+rwave,rflux,rpol,rpos,rerr = pc.median_flux_pol_pos(rtxtfiles,rfitsfiles,1000,radial_velocity=-8.9)
+rpaerr = pc.position_angle_error(rpol,rerr)
+print(rpaerr)
 plt.subplot(3,1,1)
 plt.plot(bwave,bflux)
 plt.plot(rwave,rflux)
@@ -42,7 +44,7 @@ plt.plot(rwave,rpol)
 plt.plot([6575,6575],[0,2])
 plt.xlim(6000,7000)
 plt.subplot(3,1,3)
-plt.plot(bwave,bpos)
+plt.errorbar(bwave,bpos)
 plt.plot(rwave,rpos)
 plt.xlim(6000,7000)
 plt.plot([6575,6575],[0,90])
