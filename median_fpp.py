@@ -34,7 +34,7 @@ pc.make_figure(median_wavelength, median_pol,
 plt.xlim(w - 200, w + 200)
 plt.ylim(0.105, 0.55)
 # plt.plot([vert_line,vert_line],[0,2])
-#plt.xlim(vert_line-300,vert_line+300)
+# plt.xlim(vert_line-300,vert_line+300)
 plt.subplot(3, 1, 3)
 pc.make_figure(median_wavelength, median_pos,
                median_err, title="Median U")

@@ -44,7 +44,12 @@ only around halpha, 50 on each side.
 figure out how things are changing with time.?
 
 do gif for pol and pos individuals
-narrow q vs. u
+narrow q vs. u.
+set same scale for all
 cool warm color map, for qu based on wavelength.
+
+find a way to present time
+matplotlib gridspec
+QU on He line
 
 look at astrobetter

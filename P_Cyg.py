@@ -17,6 +17,16 @@ def sub_mean(list):
     return(subbed_list)
 
 
+def cut_list(list, low=0, high=1):
+    low = low
+    high = high
+    newlist = []
+    for i in list:
+        if i >= low and i <= high:
+            newlist.append(i)
+    return(newlist)
+
+
 def bin_errors(errors, wavelength, wavelength_bin_edges):
     binned_errors = []
     # For loop cycles through each bin edge
@@ -309,6 +319,7 @@ def plot_phase_time(times, variable, period):
                  title='Time-Folded - Period=' + str(period))
     plt.show()
     return True
+
 
 
 def polarization(Q, U):
@@ -879,9 +890,9 @@ def fpp_sub_mean(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
         txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
     all_Q = sub_mean(all_Q)
     all_U = sub_mean(all_U)
-    all_pol, all_pos = [],[]
-    for q,u in zip(all_Q,all_U):
-        pol,pos = polarization(q,u)
+    all_pol, all_pos = [], []
+    for q, u in zip(all_Q, all_U):
+        pol, pos = polarization(q, u)
         all_pol.append(pol)
         all_pos.append(pos)
     interp_flux = []
