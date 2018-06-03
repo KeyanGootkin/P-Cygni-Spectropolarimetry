@@ -42,7 +42,7 @@ for w, f, q, u, e in zip(all_wavelength, all_flux, all_Q, all_U, all_err):
     plt.xlim(halpha - width, halpha + width)
 
     plt.savefig(figdir+'QU/Halpha_QU_'+str(count)+'.eps',overwrite=True)
-"""
+""""""
 count = 0
 cmap = cm.get_cmap('magma')
 for file in btxtfiles:
@@ -63,7 +63,7 @@ for file in btxtfiles:
     plt.savefig(figdir + "QU/He_Q_vs_U/He_Q_vs_U " +
                 str(count) + '.png', overwrite=True)
     plt.close(fig)
-
+"""
 """w,f,q,u,e = pc.mean_flux_Q_U(rtxtfiles, rfitsfiles, 50, radial_velocity=-8.9)
 plt.plot(q,u,'-o')
 plt.savefig(figdir+"QU/Q_vs_U/Mean_Q_vs_U.eps",overwrite=True,dpi=2000)"""
@@ -109,3 +109,30 @@ for file in rtxtfiles:
     plt.xlim(6560-200,6560+200)
     plt.ylim(40,100)
     plt.savefig(figdir+"individual fpp/Halpha_fpp_"+str(count)+".jpg",overwrite=True)"""
+"""
+count = 0
+cmap = cm.get_cmap('magma')
+w, f, q, u, e = pc.median_flux_Q_U(
+    rtxtfiles, rfitsfiles, 1000, radial_velocity=0)
+
+good_ind = []
+for i in w:
+    if i >= 6540 and i <= 6610:
+        good_ind.append(i)
+low_ind = list(w).index(min(good_ind))
+high_ind = list(w).index(max(good_ind))
+frame = plt.figure(figsize=[20, 10])
+plt.subplot2grid((1, 2), (0, 0))
+for i in good_ind:
+    plt.plot(q[list(w).index(i)], u[list(w).index(i)], '-o',
+             c=((cmap((w[list(w).index(i)] - w[low_ind]) / (w[high_ind] - w[low_ind])))))
+plt.plot(q[low_ind:high_ind], u[low_ind:high_ind], 'blue')
+plt.xlim(0, 0.5)
+plt.ylim(0, 1.3)
+plt.title("H alpha")
+plt.subplot2grid((1, 2), (0, 1))
+plt.plot(q, u, "r")
+plt.xlim(0, 0.5)
+plt.ylim(0, 1.3)
+plt.title("ALL")
+plt.savefig(figdir+"is halpha polarized.eps",overwrite=True)"""

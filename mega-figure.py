@@ -52,27 +52,29 @@ plt.show()
 #plt.savefig(figdir+"mega-fig_example.eps", overwrite=True, dpi = 1000)
 '''
 interesting_wavelengths = [4860, 5875, 6560]
-gw = interesting_wavelengths[1]
+gw = interesting_wavelengths[2]
 count = 0
 cmap = cm.get_cmap('magma')
-for txtfile, fitsfile in zip(btxtfiles, bfitsfiles):
+for txtfile, fitsfile in zip(rtxtfiles, rfitsfiles):
     count += 1
     w, f, pol, pos, e = pc.txt_pol_data(txtfile, 1000, radial_velocity=-8.9)
     paerr = pc.position_angle_error(pol, e)
+    cal_f = pc.divide_continuum(w,f,6500,6540,6610,6650)
 
     figshape = (23, 21)
     fig = plt.figure(figsize=[25, 25])
 
-    flux_fig = plt.subplot2grid(figshape, (0, 0), colspan=19, rowspan=6)
-    pc.make_figure(w, f, 0, title="Flux")
+    plt.subplot2grid(figshape, (0, 0), colspan=19, rowspan=6)
+    pc.make_figure(w, cal_f, 0, title="Flux")
     plt.xlim(gw - 100, gw + 100)
+    plt.ylim(0,5.5)
 
     pol_fig = plt.subplot2grid(figshape, (7, 11), colspan=8, rowspan=6)
     pc.make_figure(w, pol, e, title="% Polarization")
     plt.xlim(gw - 100, gw + 100)
     plt.ylim(0.3, 2.5)
 
-    pos_fig = plt.subplot2grid(figshape, (14, 11), colspan=8, rowspan=6)
+    plt.subplot2grid(figshape, (14, 11), colspan=8, rowspan=6)
     pc.make_figure(w, pos, paerr, title="Position Angle")
     plt.xlim(gw - 100, gw + 100)
     plt.ylim(30, 120)
@@ -80,7 +82,7 @@ for txtfile, fitsfile in zip(btxtfiles, bfitsfiles):
     w, f, q, u, e = pc.txt_QU_data(txtfile, 1000, radial_velocity=-8.9)
     good_ind = []
     for i in w:
-        if i >= 5860 and i <= 5895:
+        if i >= 6540 and i <= 6610:
             good_ind.append(i)
     low_ind = list(w).index(min(good_ind))
     high_ind = list(w).index(max(good_ind))
@@ -100,6 +102,6 @@ for txtfile, fitsfile in zip(btxtfiles, bfitsfiles):
     time.axvline(x=t, linewidth=4)
     plt.xlim(49500, 53000)
 
-    plt.savefig(figdir + "Mega_Fig/He/Helium_fig_" +
+    plt.savefig(figdir + "Mega_Fig/Halpha/Halpha_fig_" +
                 str(count) + ".png", overwrite=True)
     plt.close(fig)
