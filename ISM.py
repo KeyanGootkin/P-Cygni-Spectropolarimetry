@@ -91,7 +91,7 @@ def pol_line(ra, dec, pol, pa, rastretch=1, decstretch=1, color='b'):
 ism = ascii.read("C:/Users/Keyan/Desktop/Science/Data/P-Cygni/Data/ISM_stars/ISM_stars.dat", delimiter = ':')
 
 pdist = 1700
-distcut = 500
+distcut = 300
 
 ra = ism["RA"]
 dec = ism["DEC"]
@@ -109,9 +109,9 @@ fig = plt.figure()
 ax = plt.gca()
 ax.scatter(cygism["RA"],cygism["DEC"],s=6)
 
-ax.scatter(foreism["RA"],foreism["DEC"],s=6,color='g')
+'''ax.scatter(foreism["RA"],foreism["DEC"],s=6,color='g')
 
-ax.scatter(backism["RA"],backism["DEC"],s=6,color='purple')
+ax.scatter(backism["RA"],backism["DEC"],s=6,color='purple')'''
 
 ax.scatter(pra,pdec,color='r',marker='+',label='P Cygni')
 
@@ -123,11 +123,11 @@ ylim = ax.get_ylim()
 for r,d,pol,pa in zip(cygism["RA"],cygism["DEC"],cygism['% Pol'],cygism['PA']):
     pol_line(r,d,pol,pa,decstretch= (ylim[1]-ylim[0])/(xlim[1]-xlim[0]))
 
-for r,d,pol,pa in zip(foreism["RA"],foreism["DEC"],foreism['% Pol'],foreism['PA']):
+'''for r,d,pol,pa in zip(foreism["RA"],foreism["DEC"],foreism['% Pol'],foreism['PA']):
     pol_line(r,d,pol,pa,decstretch= (ylim[1]-ylim[0])/(xlim[1]-xlim[0]),color='g')
 
 for r,d,pol,pa in zip(backism["RA"],backism["DEC"],backism['% Pol'],backism['PA']):
-    pol_line(r,d,pol,pa,decstretch= (ylim[1]-ylim[0])/(xlim[1]-xlim[0]),color='purple')
+    pol_line(r,d,pol,pa,decstretch= (ylim[1]-ylim[0])/(xlim[1]-xlim[0]),color='purple')'''
 
 ax.grid()
 ax.set_xlabel("RA (Deg)")

@@ -1098,28 +1098,28 @@ def get_fits_table(fits_file):
 
 
 def get_ccd_ave_pol(fits_file):
-        """
-        Takes the fits file and extracts time, average polarization and error
-        now in ccd flavor!
+    """
+    Takes the fits file and extracts time, average polarization and error
+    now in ccd flavor!
 
-        Parameters
-        ----------
-        fits_file : string
-            The pathname to the ccd fits file you wish to extract from
+    Parameters
+    ----------
+    fits_file : string
+        The pathname to the ccd fits file you wish to extract from
 
-        Returns
-        ----------
-        obs_time : Float
-            MJD time of the observation in days
+    Returns
+    ----------
+    obs_time : Float
+        MJD time of the observation in days
 
-        ave_pol : Float
-            Mean % polarization over all wavelengths. NOTE: I think this includes
-            the messed up bits towards the edge, so don't trust this measurement too
-            much
+    ave_pol : Float
+        Mean % polarization over all wavelengths. NOTE: I think this includes
+        the messed up bits towards the edge, so don't trust this measurement too
+        much
 
-        ave_err : Float
-            error on ave_pol
-        """
+    ave_err : Float
+        error on ave_pol
+    """
     hdu = fits.open(fits_file)
     infohdu = hdu[0].header
     tablehdu = hdu[1].header
@@ -1728,7 +1728,7 @@ def fpp_sub_mean(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
     U parameters are subtracted from those values before calculating % Polarization
     and position angle to give a somewhat "normalized" version of these
     measurements. The median of each wavelength dependent value is then calculated
-    for at each wavelength value across all the observations. 
+    for at each wavelength value across all the observations.
 
     Parameters
     ----------
