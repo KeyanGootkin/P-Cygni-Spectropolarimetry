@@ -1,4 +1,4 @@
-#P Cygni Polarization
+# P Cygni Polarization
 
 ## P Cygni
 
