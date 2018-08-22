@@ -17,7 +17,7 @@ allfitsfiles = bfitsfiles + rfitsfiles + retfitsfiles
 alltxtfiles = btxtfiles + rtxtfiles + rettxtfiles
 
 
-def HalphaContinuum(wavelength,data,error=None):
+def HalphaContinuum(wavelength, data, error=None):
     continuum = []
     c_wavelength = []
     c_error = []
@@ -32,9 +32,9 @@ def HalphaContinuum(wavelength,data,error=None):
             if error != None:
                 c_error.append(error[list(wavelength).index(i)])
             c_wavelength.append(i)
-    continuum = np.interp(wavelength,c_wavelength,continuum)
+    continuum = np.interp(wavelength, c_wavelength, continuum)
     if error != None:
-        interp_error = np.interp(wavelength,c_wavelength,c_error)
+        interp_error = np.interp(wavelength, c_wavelength, c_error)
     ha_continuum = []
     ha_error = []
     ha_wavelength = []
@@ -50,9 +50,10 @@ def HalphaContinuum(wavelength,data,error=None):
     if error == None:
         return ave_continuum
     else:
-        return ave_continuum,ave_error
+        return ave_continuum, ave_error
 
-def HalphaLine(wavelength,data,error=None):
+
+def HalphaLine(wavelength, data, error=None):
     line = []
     l_wavelength = []
     l_error = []
@@ -67,42 +68,49 @@ def HalphaLine(wavelength,data,error=None):
     if error == None:
         return(ave_line)
     else:
-        return(ave_line,ave_error)
+        return(ave_line, ave_error)
 
-def meanCONTtoLINE(q,u,error):
+
+def meanCONTtoLINE(q, u, error):
     weighted_q_sum_list = []
     weighted_u_sum_list = []
     weight_list = []
-    for sq,su,e in zip(q,u,error):
-        q_weight = 1/(e**2)
-        u_weight = 1/(e**2)
-        weight_list.append(q_weight)
-        weighted_q_sum_list.append(sq*q_weight)
-        weighted_u_sum_list.append(su*u_weight)
-    mean_q = sum(weighted_q_sum_list)/(sum(weight_list))
-    mean_u = sum(weighted_u_sum_list)/(sum(weight_list))
-    return(mean_q,mean_u)
+    for sq, su, e in zip(q, u, error):
+        weight = e**-2
+        weight_list.append(weight)
+        weighted_q_sum_list.append(sq * weight)
+        weighted_u_sum_list.append(su * weight)
+    mean_q = sum(weighted_q_sum_list) / (sum(weight_list))
+    mean_u = sum(weighted_u_sum_list) / (sum(weight_list))
+    return(mean_q, mean_u)
 
 
-def QUcontinuumTOline(wavelengths,qs,us,errors=None,mean=False):
+def findANGLE(qc, ql, uc, ul):
+    theta = np.degrees(np.arccos((ul - uc) / np.hypot((ql - qc), (ul - uc))))
+    if qc > ql:
+        theta = 360 - theta
+    return(theta)
+
+
+def QUcontinuumTOline(wavelengths, qs, us, errors=None, mean=False):
     qconlist = []
-    qlinelist= []
+    qlinelist = []
     uconlist = []
-    ulinelist=[]
+    ulinelist = []
 
     if not mean:
-        for w,q,u in zip(wavelengths,qs,us):
-            q_cont = HalphaContinuum(w,q)
+        for w, q, u in zip(wavelengths, qs, us):
+            q_cont = HalphaContinuum(w, q)
             qconlist.append(q_cont)
-            q_line = HalphaLine(w,q)
+            q_line = HalphaLine(w, q)
             qlinelist.append(q_line)
-            u_cont = HalphaContinuum(w,u)
+            u_cont = HalphaContinuum(w, u)
             uconlist.append(u_cont)
-            u_line = HalphaLine(w,u)
+            u_line = HalphaLine(w, u)
             ulinelist.append(u_line)
-            plt.plot([q_cont,q_line],[u_cont,u_line],color = 'black')
-        plt.scatter(qconlist,uconlist,color='b',label="Continuum")
-        plt.scatter(qlinelist,ulinelist,color='orange',label = "Line")
+            plt.plot([q_cont, q_line], [u_cont, u_line], color='black')
+        plt.scatter(qconlist, uconlist, color='b', label="Continuum")
+        plt.scatter(qlinelist, ulinelist, color='orange', label="Line")
         plt.legend()
 
     elif mean:
@@ -110,33 +118,51 @@ def QUcontinuumTOline(wavelengths,qs,us,errors=None,mean=False):
             print("No error provided")
         cont_error = []
         line_error = []
-        for w,q,u,e in zip(wavelengths,qs,us,errors):
-            q_cont,q_cont_err = HalphaContinuum(w,q,error=e)
+        for w, q, u, e in zip(wavelengths, qs, us, errors):
+            q_cont, q_cont_err = HalphaContinuum(w, q, error=e)
             cont_error.append(q_cont_err)
             qconlist.append(q_cont)
-            q_line,q_line_err = HalphaLine(w,q,error=e)
+            q_line, q_line_err = HalphaLine(w, q, error=e)
             line_error.append(q_line_err)
             qlinelist.append(q_line)
-            u_cont,u_cont_err = HalphaContinuum(w,u,error=e)
+            u_cont, u_cont_err = HalphaContinuum(w, u, error=e)
             uconlist.append(u_cont)
-            u_line,u_line_err = HalphaLine(w,u,error=e)
+            u_line, u_line_err = HalphaLine(w, u, error=e)
             ulinelist.append(u_line)
-        q_cont,u_cont = meanCONTtoLINE(qconlist,uconlist,cont_error)
-        q_line,u_line = meanCONTtoLINE(qlinelist,ulinelist,line_error)
-        plt.plot([q_cont,q_line],[u_cont,u_line],'black')
-        plt.scatter(q_cont,u_cont,color='b',label="Continuum")
-        plt.scatter(q_line,u_line,color='orange',label = "Line")
+        q_cont, u_cont = meanCONTtoLINE(qconlist, uconlist, cont_error)
+        q_line, u_line = meanCONTtoLINE(qlinelist, ulinelist, line_error)
+        plt.plot([q_cont, q_line], [u_cont, u_line], 'black')
+        plt.scatter(q_cont, u_cont, color='b', label="Continuum")
+        plt.scatter(q_line, u_line, color='orange', label="Line")
         plt.legend()
+        return(findANGLE(q_cont, q_line, u_cont, u_line))
 
+
+"""This recreates fig 5 which draws lines from Halpha continuum QU to the line QU, and claims that this is interstellar polarization.
 w,f,q,u,e = pc.get_all_QU(rtxtfiles, rfitsfiles,1000, radial_velocity=-8.9)
 
-QUcontinuumTOline(w,q,u,errors=e,mean=True)
-plt.xlim(0.3,0.4)
-plt.ylim(0.9,1.1)
+pa = QUcontinuumTOline(w,q,u,errors=e,mean=True)
+print(pa)
+plt.xlim(0.36,0.4)
+plt.ylim(1,1.04)
 plt.show()
-
-
 """
+"""This shows H alpha polarization changes over time, if no intrinsic polarization, H alpha shouldn't change?
+w,f,pol,pa,e = pc.get_all_fpp(rtxtfiles, rfitsfiles,1000, radial_velocity=-8.9)
+time = []
+for file in rfitsfiles:
+    t,nothing1,nothing2 = pc.get_ccd_ave_pol(file)
+    time.append(t)
+hapol = []
+haerr = []
+for wave,p,err in zip(w,pol,e):
+    hpol,herr = HalphaLine(wave,p,error=err)
+    hapol.append(hpol)
+    haerr.append(herr)
+pc.make_figure(time,hapol,haerr)
+plt.show()
+"""
+""" THis shows continuum and line boundary regions
 rwave,rflux,rpol,rpos,rerr = pc.median_flux_pol_pos(rtxtfiles,rfitsfiles,1000,radial_velocity=-8.9)
 plt.plot(rwave,rflux)
 plt.xlim(5900,7100)
@@ -146,7 +172,7 @@ for b in boundaries:
 plt.grid()
 plt.show()
 """
-"""
+"""Testing matching function
 mtxtfiles = pc.match_rb_txt_files(rtxtfiles, btxtfiles)
 mfitsfiles = pc.match_rb_fits_files(rfitsfiles, bfitsfiles)
 pc.stack_txt_pol_data(mtxtfiles[0], mfitsfiles[0], 250)
