@@ -10,8 +10,7 @@ from astropy.table import Table, Column
 
 '''TOOLS'''
 
-
-def pol_line(ra, dec, pol, pa, rastretch=1, decstretch=1, color='b'):
+def pol_line(ra, dec, pol, pa, rastretch=1, decstretch=1, color='b', lw = 3):
     """
     Creates a line centered on the ra and dec of a star which shows the % polarization
     (length of line), and position angle (angle of line) of that star. NOTE: you
@@ -47,9 +46,8 @@ def pol_line(ra, dec, pol, pa, rastretch=1, decstretch=1, color='b'):
     deltadec = l * np.cos(np.deg2rad(pa)) * decstretch
     deltara = l * np.sin(np.deg2rad(pa)) * rastretch
     plt.plot([center[0] - deltara, center[0] + deltara], [center[1] -
-             deltadec, center[1] + deltadec], color=color, linewidth=0.5)
+             deltadec, center[1] + deltadec], color=color, linewidth=lw)
     return()
-
 
 def find_continuum_w_gap(wavelength, data, left_1, left_2, right_1, right_2):
     """
@@ -86,16 +84,10 @@ def find_continuum_w_gap(wavelength, data, left_1, left_2, right_1, right_2):
     ave_continuum : float
         The average value of the data between left_1, left_2 and right_1, right_2
     """
-    continuum = []
-    w = wavelength
-    for i in w:
-        if i >= left_1 and i <= left_2:
-            continuum.append(data[list(w).index(i)])
-        elif i >= right_1 and i <= right_2:
-            continuum.append(data[list(w).index(i)])
-    ave_continuum = np.mean(np.array(continuum))
-    return(ave_continuum)
-
+    left = [d    for d,w in zip(data,wavelgnth) if (w >= left1) and (w <= left2)]
+    right = [d    for d,w in zip(data,wavelgnth) if (w >= right1) and (w <= right2)]
+    continuum = left+right
+    return np.mean(continuum)
 
 def divide_continuum(wavelength, data, left_1, left_2, right_1, right_2):
     """
@@ -138,7 +130,6 @@ def divide_continuum(wavelength, data, left_1, left_2, right_1, right_2):
     new_data = np.array(data) / continuum
     return(new_data)
 
-
 def sub_mean(list):
     """
     Takes a list and subtracts the mean from each indice. NOTE: the mean is done
@@ -160,35 +151,6 @@ def sub_mean(list):
     list = np.array(list)
     subbed_list = list - np.mean(list, axis=0)
     return(subbed_list)
-
-
-def cut_list(list, low=0, high=1):
-    """
-    Takes a list of values and returns only the values of the list between the
-    low and high (inclusive) given as kwargs.
-
-    Parameters
-    ------------
-    list : list
-        A list of numerical values.
-
-    low : integer or float
-        The lowest value you wish to have in the new list.
-
-    high : integer or float
-        The highest value you wish to have in the new list.
-
-    Returns
-    ------------
-    newlist : list
-        list, but with only values between low and high (inclusive)
-    """
-    newlist = []
-    for i in list:
-        if i >= low and i <= high:
-            newlist.append(i)
-    return(newlist)
-
 
 def bin_errors(errors, wavelength, wavelength_bin_edges):
     """
@@ -240,7 +202,6 @@ def bin_errors(errors, wavelength, wavelength_bin_edges):
     # Return the list of errors for each binned region.
     return(binned_errors)
 
-
 def error_of_median(all_err):
     """
     Takes a list of lists of errors, and correctly calculates the median error
@@ -258,10 +219,9 @@ def error_of_median(all_err):
     median_err : array
         The median error over a series of different observations.
     """
-    median_err = (1.253 * ((sum(np.array(all_err)**2))**0.5)) / \
+    median_err = (1.253 * (np.sqrt(sum(np.array(all_err)**2)))) / \
         np.sqrt(len(all_err))
     return(median_err)
-
 
 def position_angle_error(pol, err):
     """
@@ -283,7 +243,6 @@ def position_angle_error(pol, err):
     """
     paerr = (err / pol) * (90 / np.pi)
     return(paerr)
-
 
 def dedopler(raw_wavelength, radial_velocity):
     """
@@ -309,9 +268,8 @@ def dedopler(raw_wavelength, radial_velocity):
         return(raw_wavelength)
     else:
         z = radial_velocity / (3 * 10**5)
-        calibrated_wavelength = raw_wavelength / (1 + z)
+        calibrated_wavelength = np.asarray(raw_wavelength) / (1 + z)
         return(calibrated_wavelength)
-
 
 def Theta(period, times, magnitudes, errors):
     """
@@ -363,7 +321,6 @@ def Theta(period, times, magnitudes, errors):
     Theta = top_sum / (bottom_sum * w_i_sum)
     return(Theta)
 
-
 def hybrid_periodogram(times, magnitudes, errors, give_ls=False):
     """
     computes the power or periodicity (a hybrid method which uses both
@@ -413,7 +370,6 @@ def hybrid_periodogram(times, magnitudes, errors, give_ls=False):
     else:
         return period, menorah
 
-
 def find_best_period(period, power):
     """
     Takes the results of a periodogram and searches it for the period with the
@@ -437,101 +393,6 @@ def find_best_period(period, power):
     best_period = (period[best_period_ind])[len(period) - 1]
     return(best_period)
 
-
-def make_figure(x, y, err, title="", axis=["", ""]):
-    """
-    Creates a pretty errorbar figure
-
-    Parameters
-    ---------
-    x : list
-        data for the x axis of the plot
-
-    y : list
-        data for the y axis of the plot
-
-    err : list
-        list of errors for the data on the y axis
-
-    title : string
-        what you would like the title of the plot to be.
-
-    """
-
-    # Creates actual plot
-    plt.errorbar(x, y, yerr=err)
-    # Sets the title of the plot
-    plt.title(title, size=23, fontname='Times New Roman')
-    # Labels the x and y axis.
-    plt.gca().set_xlabel(axis[0], size=17, fontname='Times New Roman')
-    plt.ylabel(axis[1], size=17, fontname='Times New Roman')
-    # Makes the axis look nice (Thank you Cayenne)
-    plt.xticks(fontsize=15, fontname='Times New Roman', color='darkslategrey')
-    plt.yticks(fontsize=15, fontname='Times New Roman', color='darkslategrey')
-    # Creates a grid on the plot to make it more readable
-    plt.grid()
-    return True
-
-
-def make_periodogram_figure(period, power):
-    """
-    Creates a periodogram figure, from 0 to 30 minutes in period, given
-    an array of periods and power for a single filter.
-
-    Parameters
-    ---------
-    period : numpy array
-        an array of periods for which the periodicity was calculated
-
-    power : numpy array
-        an array of computed periodicities
-    """
-    plt.figure(figsize=[10, 5]),
-    # creates the actual figure
-    plt.errorbar(period, power)
-    # sets title
-    plt.title('Periodogram', size=23, fontname='Times New Roman')
-    # Labels the x-axis then the y-axis
-    plt.gca().set_xlabel('Period [MJD]', size=17, fontname='Times New Roman')
-    plt.ylabel('Peroidicity', size=17, fontname='Times New Roman')
-    # Makes the axis look nice (Thank you Cayenne)
-    plt.xticks(fontsize=15, fontname='Times New Roman', color='darkslategrey')
-    plt.yticks(fontsize=15, fontname='Times New Roman', color='darkslategrey')
-    # Sets up grid
-    plt.grid()
-    return True
-
-
-def make_scatter(x, y, title=""):
-    """
-    Creates a pretty scatter plot
-
-    Parameters
-    ---------
-    x : list
-        data for the x axis of the plot
-
-    y : list
-        data for the y axis of the plot
-
-    title : string
-        what you would like the title of the plot to be.
-
-    """
-    # Crank up the size of the figure, for beauty purposes.
-    plt.figure(figsize=[10, 5])
-    # Creates actual plot
-    plt.scatter(x, y)
-    # Sets the title of the plot
-    plt.title(title, size=23, fontname='Times New Roman')
-    # Makes the axis look nice (Thank you Cayenne)
-    plt.xticks(fontsize=15, fontname='Times New Roman', color='darkslategrey')
-    plt.yticks(fontsize=15, fontname='Times New Roman', color='darkslategrey')
-    # Creates a grid on the plot to make it more readable
-    plt.grid()
-    return True
-
-
 def plot_phase_time(times, variable, period,title=""):
     """
     takes a set of time-series data, phase-folds it, then plots it as a scatter
@@ -549,11 +410,10 @@ def plot_phase_time(times, variable, period,title=""):
         The period which you would like to fold the data by.
     """
     phase_times = (times / period) % 1
-    make_scatter(phase_times, variable,
+    plt.scatter(phase_times, variable,
                  title=title + 'Phase Plot - Period=' + str(period))
     plt.show()
     return True
-
 
 def polarization(Q, U):
     """
@@ -577,11 +437,10 @@ def polarization(Q, U):
     position_angle : numpy array
         An array of position angles
     """
-    Q, U = np.array(Q), np.array(U)
+    Q, U = np.array(np.absolute(Q)), np.array(np.absolute(U))
     polarization = np.sqrt(Q**2 + U**2)
     position_angle = np.degrees(np.arctan2(U, Q))/2
     return(polarization, position_angle)
-
 
 def easy_bin_mean(x, data, bins_num, type='mean'):
     """
@@ -618,63 +477,7 @@ def easy_bin_mean(x, data, bins_num, type='mean'):
         print("ERROR: the function easy_bin_mean has not been passed a valid type.")
     return(bin_x, bin_data)
 
-
-def match_rb_txt_files(rtxtfiles, btxtfiles):
-    """
-    Takes the HPOL data txt files and matches the red and blue observations that
-    are from the same night.
-
-    Parameters
-    ------------
-    rtxtfiles : list
-        list of red observation txt files
-
-    btxtfiles : list
-        list of blue observation txt files
-
-    Returns
-    ------------
-    matched_files : list
-        A list where each entry is a list, [r, b], where is r is the red txt file
-        name and b is the blue txt file name.
-    """
-    matched_files = []
-    for r in rtxtfiles:
-        for b in btxtfiles:
-            if r[len(r) - 21:len(r) - 13] == b[len(b) - 21:len(b) - 13]:
-                matched_files.append([r, b])
-    return(matched_files)
-
-
-def match_rb_fits_files(rfitsfiles, bfitsfiles):
-    """
-    Takes the HPOL data fits files and matches the red and blue observations that
-    are from the same night.
-
-    Parameters
-    ------------
-    rfitsfiles : list
-        list of red observation fits files
-
-    bfitsfiles : list
-        list of blue observation fits files
-
-    Returns
-    ------------
-    matched_files : list
-        A list where each entry is a list, [r, b], where r is the red fits file
-        name and b is the blue fits file name.
-    """
-    matched_files = []
-    for r in rfitsfiles:
-        for b in bfitsfiles:
-            if r[len(r) - 17:len(r) - 9] == b[len(b) - 17:len(b) - 9]:
-                matched_files.append([r, b])
-    return(matched_files)
-
-
 '''FLUX, POLARIZATION AND POSITION ANGLE FIGURES'''
-
 
 def txt_pol_data(txt_file_name, bin_num, radial_velocity=0):
     """
@@ -732,9 +535,9 @@ def txt_pol_data(txt_file_name, bin_num, radial_velocity=0):
     # calculate polarization and position angle
     pol, pos = polarization(bin_Q, bin_U)
     # get rid of doppler shift
-    wavelength = dedopler(wavelength, radial_velocity)
-    return(wavelength_bin_edges[1:], bin_flux, pol, pos, bin_err)
-
+    w = [np.mean([wavelength_bin_edges[i],wavelength_bin_edges[i+1]])    for i in range(len(wavelength_bin_edges)-1)]
+    w = dedopler(w, radial_velocity)
+    return(w, bin_flux, pol, pos, bin_err)
 
 def txt_QU_data(txt_file_name, bin_num, radial_velocity=0):
     """
@@ -785,252 +588,15 @@ def txt_QU_data(txt_file_name, bin_num, radial_velocity=0):
     wavelength_bin_edges, bin_flux = easy_bin_mean(wavelength, flux, bin_num)
     bin_err = bin_errors(err, wavelength, wavelength_bin_edges)
     # get rid of doppler shift
-    wavelength = dedopler(wavelength, radial_velocity)
-    return(wavelength_bin_edges[1:], bin_flux, bin_Q, bin_U, bin_err)
-
-
-def stack_txt_pol_data(txt_file_list, fits_file_list, bin_num, radial_velocity=0, window=[3000, 8000], vert_line=False):
-    """
-    Takes the files you give it and graphs flux, % pol, and position angle all
-    vs. wavelength for each file. The files are stacked on eachother and color
-    coded so that the lighter the line, the newer the observation
-
-    Parameters
-    ----------
-    txt_file_list : list or array
-        A list where each indice is the string of the pathname to the txt file
-        you wish to extract data from
-
-    fits_file_list : list or array
-        A list where each indice is the string of the pathname to the fits file
-        you wish to extract data from
-
-    bin_num : integer
-        The number of bins you which to have. A higher number will mean smaller bins
-
-    radial_velocity : float
-        The radial velocity of the object you are observing. This is used to account
-        for the doppler shift in wavelength dependent data.
-
-    window : list
-        A 2 piece list where the first is the lower x_lim and the second is the
-        upper x_lim you want
-
-    vert_line : Integer or Float
-        If you would like a verticle line, then enter the x value you would like
-        the line to appear at
-    """
-    all_wavelength = []
-    all_flux = []
-    all_pol = []
-    all_pos = []
-    all_MJD = []
-    cmap = cm.get_cmap('inferno')
-    plt.figure(figsize=[15, 20])
-    for i in range(len(txt_file_list)):
-        txt, fits = txt_file_list[i], fits_file_list[i]
-        wavelength, flux, pol, pos, err = txt_pol_data(txt, bin_num)
-        wavelength = dedopler(wavelength, radial_velocity)
-        if fits[len(fits) - 26:len(fits) - 23] == 'ret':
-            MJD, ave_pol, ave_err = get_ave_pol(fits)
-        elif fits[len(fits) - 27:len(fits) - 24] == 'ccd':
-            MJD, ave_pol, ave_err = get_ccd_ave_pol(fits)
-        else:
-            print("Sorry, I can't tell if this is a ccd image or a ret image.")
-            break
-        all_wavelength.append(wavelength)
-        all_flux.append(flux)
-        all_pol.append(pol)
-        all_pos.append(pos)
-        all_MJD.append(MJD)
-    for wavelength, flux, pol, pos, MJD in zip(all_wavelength, all_flux, all_pol, all_pos, all_MJD):
-        plt.subplot(3, 1, 1)
-        plt.plot(wavelength, flux / np.median(flux), label=(txt[len(txt) - 20:len(
-            txt) - 12]), c=cmap((MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [0, 6])
-        plt.title("Flux")
-        plt.xlim(window[0], window[1])
-        plt.subplot(3, 1, 2)
-        plt.plot(wavelength, pol, label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [min(pol), max(pol)])
-        plt.title("% Polarization")
-        plt.xlim(window[0], window[1])
-        plt.subplot(3, 1, 3)
-        plt.plot(wavelength, pos, label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [min(pos), max(pos)])
-        plt.title("Position Angle")
-        plt.xlim(window[0], window[1])
-
-
-def stack_ccd_txt_pol_data(txt_file_list, fits_file_list, bin_num, radial_velocity=0, window=[2800, 11000], vert_line=False):
-    """
-    Takes the files you give it and graphs flux, % pol, and position angle all
-    vs. wavelength for each file. The files are stacked on eachother and color
-    coded so that the lighter the line, the newer the observation. Same as above
-    but for ccd files specifically
-
-    Parameters
-    ----------
-    txt_file_list : list or array
-        A list where each indice is the string of the pathname to the txt file
-        you wish to extract data from
-
-    fits_file_list : list or array
-        A list where each indice is the string of the pathname to the fits file
-        you wish to extract data from
-
-    bin_num : integer
-        The number of bins you which to have. A higher number will mean smaller bins
-
-    radial_velocity : float
-        The radial velocity of the object you are observing. This is used to account
-        for the doppler shift in wavelength dependent data.
-
-    window : list
-        A 2 piece list where the first is the lower x_lim and the second is the
-        upper x_lim you want
-
-    vert_line : Integer or Float
-        If you would like a verticle line, then enter the x value you would like
-        the line to appear at
-    """
-    all_wavelength = []
-    all_flux = []
-    all_pol = []
-    all_pos = []
-    all_MJD = []
-    cmap = cm.get_cmap('viridis')
-    plt.figure(figsize=[15, 20])
-    for i in range(len(txt_file_list)):
-        txt, fits = txt_file_list[i], fits_file_list[i]
-        wavelength, flux, pol, pos, err = txt_pol_data(txt, bin_num)
-        wavelength = dedopler(wavelength, radial_velocity)
-        if fits[len(fits) - 26:len(fits) - 23] == 'ret':
-            MJD, ave_pol, ave_err = get_ave_pol(fits)
-        elif fits[len(fits) - 27:len(fits) - 24] == 'ccd':
-            MJD, ave_pol, ave_err = get_ccd_ave_pol(fits)
-        else:
-            print("Sorry, I can't tell if this is a ccd image or a ret image.")
-            break
-        all_wavelength.append(wavelength)
-        all_flux.append(flux)
-        all_pol.append(pol)
-        all_pos.append(pos)
-        all_MJD.append(MJD)
-    both_color_wave, r_color_wave, b_color_wave = [], [], []
-    both_color_flux, r_color_flux, b_color_flux = [], [], []
-    both_color_pol, r_color_pol, b_color_pol = [], [], []
-    both_color_pos, r_color_pos, b_color_pos = [], [], []
-    both_color_MJD, r_color_MJD, b_color_MJD = [], [], []
-
-    for wavelength, flux, pol, pos, MJD in zip(all_wavelength, all_flux, all_pol, all_pos, all_MJD):
-        plt.subplot(3, 1, 1)
-        plt.plot(wavelength, flux, label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [0, 6e-12])
-        plt.title("Flux")
-        plt.xlim(window[0], window[1])
-        plt.subplot(3, 1, 2)
-        plt.plot(wavelength, pol, label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [min(pol), max(pol)])
-        plt.title("% Polarization")
-        plt.xlim(window[0], window[1])
-        plt.subplot(3, 1, 3)
-        plt.plot(wavelength, pos, label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [min(pos), max(pos)])
-        plt.title("Position Angle")
-        plt.xlim(window[0], window[1])
-
-
-def vert_stack_ccd_txt_pol_data(txt_file_list, fits_file_list, bin_num, radial_velocity=0, window=[2800, 11000], vert_line=False):
-    """
-    Takes the files you give it and graphs flux, % pol, and position angle all
-    vs. wavelength for each file. The files are stacked one on top of eachother
-    and color coded so that the lighter the line, the newer the observation
-
-    Parameters
-    ----------
-    txt_file_list : list or array
-        A list where each indice is the string of the pathname to the txt file
-        you wish to extract data from
-
-    fits_file_list : list or array
-        A list where each indice is the string of the pathname to the fits file
-        you wish to extract data from
-
-    bin_num : integer
-        The number of bins you which to have. A higher number will mean smaller bins
-
-    radial_velocity : float
-        The radial velocity of the object you are observing. This is used to account
-        for the doppler shift in wavelength dependent data.
-
-    window : list
-        A 2 piece list where the first is the lower x_lim and the second is the
-        upper x_lim you want
-
-    vert_line : Integer or Float
-        If you would like a verticle line, then enter the x value you would like
-        the line to appear at
-    """
-    all_wavelength = []
-    all_flux = []
-    all_pol = []
-    all_pos = []
-    all_MJD = []
-    cmap = cm.get_cmap('viridis')
-
-    for i in range(len(txt_file_list)):
-        txt, fits = txt_file_list[i], fits_file_list[i]
-        wavelength, flux, pol, pos, err = txt_pol_data(txt, bin_num)
-        wavelength = dedopler(wavelength, radial_velocity)
-        if fits[len(fits) - 26:len(fits) - 23] == 'ret':
-            MJD, ave_pol, ave_err = get_ave_pol(fits)
-        elif fits[len(fits) - 27:len(fits) - 24] == 'ccd':
-            MJD, ave_pol, ave_err = get_ccd_ave_pol(fits)
-        else:
-            print("Sorry, I can't tell if this is a ccd image or a ret image.")
-            break
-        all_wavelength.append(wavelength)
-        all_flux.append(flux)
-        all_pol.append(pol)
-        all_pos.append(pos)
-        all_MJD.append(MJD)
-    both_color_wave, r_color_wave, b_color_wave = [], [], []
-    both_color_flux, r_color_flux, b_color_flux = [], [], []
-    both_color_pol, r_color_pol, b_color_pol = [], [], []
-    both_color_pos, r_color_pos, b_color_pos = [], [], []
-    both_color_MJD, r_color_MJD, b_color_MJD = [], [], []
-    i = 0
-    plt.figure(figsize=[15, 20])
-    for wavelength, flux, pol, pos, MJD in zip(all_wavelength, all_flux, all_pol, all_pos, all_MJD):
-        plt.subplot(3, 1, 1)
-        plt.plot(wavelength, flux + ((i * 10**-10) / 3), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [0, 6e-12])
-        plt.title("Flux")
-        plt.xlim(window[0], window[1])
-        plt.subplot(3, 1, 2)
-        plt.plot(wavelength, pol + (i / 10), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [min(pol), max(pol)])
-        plt.title("% Polarization")
-        plt.xlim(window[0], window[1])
-        plt.subplot(3, 1, 3)
-        plt.plot(wavelength, pos + (5 * i), label=(txt[len(txt) - 20:len(txt) - 12]), c=cmap(
-            (MJD - min(all_MJD)) / (max(all_MJD) - min(all_MJD))))
-        plt.plot([vert_line, vert_line], [min(pos), max(pos)])
-        plt.title("Position Angle")
-        plt.xlim(window[0], window[1])
-        i += 1
-
+    w = [np.mean([wavelength_bin_edges[i],wavelength_bin_edges[i+1]])    for i in range(len(wavelength_bin_edges)-1)]
+    w = dedopler(w, radial_velocity)
+    return(w, bin_flux, bin_Q, bin_U, bin_err)
 
 '''AVERAGE POLARIZATION CURVES'''
 
+def get_time(fits_file):
+    hdu = fits.open(fits_file)
+    return hdu[0].header["MJD-OBS"]
 
 def get_ave_pol(fits_file):
     """
@@ -1060,7 +626,6 @@ def get_ave_pol(fits_file):
     ave_pol, ave_err = tablehdu["Ave-pol"], tablehdu["Ave-erro"]
     obs_time = infohdu["MJD_OBS"]
     return(obs_time, ave_pol, ave_err)
-
 
 def get_fits_table(fits_file):
     """
@@ -1094,7 +659,6 @@ def get_fits_table(fits_file):
     err = table['error'][0]
     return(wavelength, Q, U, err)
 
-
 def get_ccd_ave_pol(fits_file):
     """
     Takes the fits file and extracts time, average polarization and error
@@ -1125,211 +689,9 @@ def get_ccd_ave_pol(fits_file):
     obs_time = infohdu["MJD-OBS"]
     return(obs_time, ave_pol, ave_err)
 
-
-def ave_pol_curve(fits_file_list):
-    """
-    Takes the fits files and extracts time, average polarization and error
-
-    Parameters
-    ----------
-    fits_file_list : list
-        A list where each indice is the pathname to the ccd fits file you wish
-        to extract from
-
-    Returns
-    ----------
-    times_list : list
-        list where each indice is MJD time of the observation in days
-
-    average_pol_list : list
-        list where each indice is Mean % polarization over all wavelengths.
-        NOTE: I think this includes the messed up bits towards the edge, so don't
-        trust this measurement too much
-
-    average_err_list : list
-        list where each indice is error on the average pol measurement
-    """
-    # Create empty lists for later
-    times_list = []
-    average_pol_list = []
-    average_err_list = []
-    # For every file given, find time,average polarization, and average error
-    for files in fits_file_list:
-        obs_time, ave_pol, ave_err = get_ave_pol(files)
-        times_list.append(obs_time)
-        average_pol_list.append(ave_pol)
-        average_err_list.append(ave_err)
-    # Sort all of these boys because SOME TIMES DON"T PLAY NICE
-    times_list, average_pol_list, average_err_list = np.array(
-        times_list), np.array(average_pol_list), np.array(average_err_list)
-    times_sort = np.argsort(times_list)
-    times_list = times_list[times_sort]
-    average_pol_list = average_pol_list[times_sort]
-    average_err_list = average_err_list[times_sort]
-    return(times_list, average_pol_list, average_err_list)
-
-
-def ccd_ave_pol_curve(fits_file_list):
-    """
-    Takes the fits files and extracts time, average polarization and error
-
-    Parameters
-    ----------
-    fits_file_list : list
-        A list where each indice is the pathname to the ccd fits file you wish
-        to extract from
-
-    Returns
-    ----------
-    times_list : list
-        list where each indice is MJD time of the observation in days
-
-    average_pol_list : list
-        list where each indice is Mean % polarization over all wavelengths.
-        NOTE: I think this includes the messed up bits towards the edge, so don't
-        trust this measurement too much
-
-    average_err_list : list
-        list where each indice is error on the average pol measurement
-    """
-    # Create empty lists for later
-    times_list = []
-    average_pol_list = []
-    average_err_list = []
-    # For every file given, find time,average polarization, and average error
-    for files in fits_file_list:
-        obs_time, ave_pol, ave_err = get_ccd_ave_pol(files)
-        times_list.append(obs_time)
-        average_pol_list.append(ave_pol)
-        average_err_list.append(ave_err)
-    # Sort all of these boys because SOME TIMES DON"T PLAY NICE
-    times_list, average_pol_list, average_err_list = np.array(
-        times_list), np.array(average_pol_list), np.array(average_err_list)
-    times_sort = np.argsort(times_list)
-    times_list = times_list[times_sort]
-    average_pol_list = average_pol_list[times_sort]
-    average_err_list = average_err_list[times_sort]
-    return(times_list, average_pol_list, average_err_list)
-
-
-def calculate_average_polarization_ret(ret_fits_file_list):
-    """
-    A more robust and accurate way of measuring average pol and pos
-
-    Parameters
-    ----------
-    ret_fits_file_list : list
-        A list where each indice is the pathname to the ret fits file you wish
-        to extract from
-
-    Returns
-    ----------
-    times : list
-        list where each indice is MJD time of the observation in days
-
-    ave_pol_list : list
-        list where each indice is Mean % polarization over all wavelengths.
-
-    ave_pos_list : list
-        list where each indice is Mean position angle over all wavelengths.
-
-    ave_err_list : list
-        list where each indice is error on the average pol measurement
-    """
-    times = []
-    ave_pol_list = []
-    ave_pos_list = []
-    ave_err_list = []
-    for ret in ret_fits_file_list:
-        obs_time, ave_pol, ave_err = get_ave_pol(ret)
-        wavelength, q, u, err = get_fits_table(ret)
-        pol, pos = polarization(q, u)
-        good_ind = []
-        for i in wavelength:
-            if i >= 4000 and i <= 7000:
-                good_ind.append(True)
-            else:
-                good_ind.append(False)
-        good_pol, good_pos = pol[good_ind], pos[good_ind]
-        mean_pol = np.mean(good_pol)
-        mean_pos = np.mean(good_pos)
-        times.append(obs_time)
-        ave_pol_list.append(mean_pol)
-        ave_pos_list.append(mean_pos)
-        ave_err_list.append(ave_err)
-    times, ave_pol_list, ave_pos_list, ave_err_list = np.array(times), np.array(
-        ave_pol_list), np.array(ave_pos_list), np.array(ave_err_list)
-    times_sort = np.argsort(times)
-    times = times[times_sort]
-    ave_pos_list = ave_pos_list[times_sort]
-    ave_pol_list = ave_pol_list[times_sort]
-    ave_err_list = ave_err_list[times_sort]
-    return(times, ave_pol_list, ave_pos_list, ave_err_list)
-
-
-"""THIS NEEDS TO BE CHANGED, BOUNDS ARE WRONG"""
-
-
-def calculate_average_polarization_ccd(ccd_fits_file_list):
-    """
-    A more robust and accurate way of measuring average pol and pos
-
-    Parameters
-    ----------
-    ccd_fits_file_list : list
-        A list where each indice is the pathname to the ccd fits file you wish
-        to extract from
-
-    Returns
-    ----------
-    times : list
-        list where each indice is MJD time of the observation in days
-
-    ave_pol_list : list
-        list where each indice is Mean % polarization over all wavelengths.
-
-    ave_pos_list : list
-        list where each indice is Mean position angle over all wavelengths.
-
-    ave_err_list : list
-        list where each indice is error on the average pol measurement
-    """
-    times = []
-    ave_pol_list = []
-    ave_pos_list = []
-    ave_err_list = []
-    for ccd in ccd_fits_file_list:
-        obs_time, ave_pol, ave_err = get_ccd_ave_pol(ccd)
-        wavelength, q, u, err = get_fits_table(ccd)
-        pol, pos = polarization(q, u)
-        good_ind = []
-        for i in wavelength:
-            if i >= 4000 and i <= 7000:
-                good_ind.append(True)
-            else:
-                good_ind.append(False)
-
-        good_pol, good_pos = pol[good_ind], pos[good_ind]
-        mean_pol = np.mean(good_pol)
-        mean_pos = np.mean(good_pos)
-        times.append(obs_time)
-        ave_pol_list.append(mean_pol)
-        ave_pos_list.append(mean_pos)
-        ave_err_list.append(ave_err)
-    times, ave_pol_list, ave_pos_list, ave_err_list = np.array(times), np.array(
-        ave_pol_list), np.array(ave_pos_list), np.array(ave_err_list)
-    times_sort = np.argsort(times)
-    times = times[times_sort]
-    ave_pos_list = ave_pos_list[times_sort]
-    ave_pol_list = ave_pol_list[times_sort]
-    ave_err_list = ave_err_list[times_sort]
-    return(times, ave_pol_list, ave_pos_list, ave_err_list)
-
-
 """MEDIANING ALL OF THE THINGS"""
 
-
-def get_all_fpp(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+def get_all_fpp(txt_file_list, bin_num, radial_velocity=0):
     """
     Takes the files you give it and extracts wavelength, flux, % Polarization,
     position angle, and error for each file. These values are stored in a large
@@ -1375,23 +737,17 @@ def get_all_fpp(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
         A list of error arrays for each observation in the list of files
         given
     """
-    all_wavelength = []
-    all_flux = []
-    all_pol = []
-    all_pos = []
-    all_err = []
-    for txt, fits in zip(txt_file_list, fits_file_list):
-        wavelength, flux, pol, pos, err = txt_pol_data(txt, bin_num)
-        wavelength = dedopler(wavelength, radial_velocity)
-        all_wavelength.append(wavelength)
-        all_flux.append(flux)
-        all_pol.append(pol)
-        all_pos.append(pos)
-        all_err.append(err)
-    return(all_wavelength, all_flux, all_pol, all_pos, all_err)
+    params = np.array([txt_QU_data(f,bin_num,radial_velocity = radial_velocity)    for f in txt_file_list])
+    wavelength = params[:,0]
+    flux = params[:,1]
+    Q = params[:,2]
+    U = params[:,3]
+    err = params[:,4]
+    pol,pos = polarization(Q,U)
+    return wavelength, flux, pol, pos, err
 
 
-def get_all_QU(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+def get_all_QU(txt_file_list, bin_num, radial_velocity=0):
     """
     Takes the files you give it and extracts wavelength, flux, Stokes Q, Stokes
     U, and error for each file. These values are stored in a large list where
@@ -1436,23 +792,16 @@ def get_all_QU(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
         A list of error arrays for each observation in the list of files
         given
     """
-    all_wavelength = []
-    all_flux = []
-    all_Q = []
-    all_U = []
-    all_err = []
-    for txt, fits in zip(txt_file_list, fits_file_list):
-        wavelength, flux, Q, U, err = txt_QU_data(txt, bin_num)
-        wavelength = dedopler(wavelength, radial_velocity)
-        all_wavelength.append(wavelength)
-        all_flux.append(flux)
-        all_Q.append(Q)
-        all_U.append(U)
-        all_err.append(err)
-    return(all_wavelength, all_flux, all_Q, all_U, all_err)
+    params = np.array([txt_QU_data(f,bin_num,radial_velocity = radial_velocity)    for f in txt_file_list])
+    wavelength = params[:,0]
+    flux = params[:,1]
+    Q = params[:,2]
+    U = params[:,3]
+    err = params[:,4]
+    return wavelength, flux, Q, U, err
 
 
-def median_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+def median_flux_Q_U(txt_file_list, bin_num, radial_velocity=0):
     """
     Takes the files you give it and extracts wavelength, flux, Stokes Q, Stokes
     U, and error for each file. The median of each wavelength dependent value is
@@ -1493,7 +842,7 @@ def median_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
         A list of median error values across the values of wavelength
     """
     all_wavelength, all_flux, all_Q, all_U, all_err = get_all_QU(
-        txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
+        txt_file_list, bin_num, radial_velocity=radial_velocity)
     interp_flux = []
     interp_Q = []
     interp_U = []
@@ -1518,53 +867,7 @@ def median_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
     return(all_wavelength[0], median_flux, median_Q, median_U, median_err)
 
 
-def median_flux_pol_pos(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
-    """
-    Takes the files you give it and extracts wavelength, flux, % Polarization,
-    position angle, and error for each file. The median of each wavelength
-    dependent value is then calculated for at each wavelength value across all
-    the observations.
-
-    Parameters
-    ----------
-    txt_file_list : list or array
-        A list where each indice is the string of the pathname to the txt file
-        you wish to extract data from
-
-    fits_file_list : list or array
-        A list where each indice is the string of the pathname to the fits file
-        you wish to extract data from
-
-    bin_num : integer
-        The number of bins you which to have. A higher number will mean smaller bins
-
-    radial_velocity : float
-        The radial velocity of the object you are observing. This is used to account
-        for the doppler shift in wavelength dependent data.
-
-    Returns
-    ----------
-    all_wavelength[0] : List
-        An array of wavelengths across which the other values can be compared
-
-    median_flux : List
-        A list of median flux values across the values of wavelength
-
-    median_pol : List
-        A list of median % polarization values across the values of wavelength
-
-    median_pos : List
-        A list of median postion angle values across the values of wavelength
-
-    median_err : List
-        A list of median error values across the values of wavelength
-    """
-    wavelength,median_flux,q,u,median_err = median_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
-    median_pol,median_pos = polarization(q,u)
-    return(wavelength, median_flux, median_pol, median_pos, median_err)
-
-
-def mean_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
+def mean_flux_Q_U(txt_file_list, bin_num, radial_velocity=0):
     """
     Takes the files you give it and extracts wavelength, flux, Stokes Q, Stokes
     U, and error for each file. The mean of each wavelength dependent value is
@@ -1574,10 +877,6 @@ def mean_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
     ----------
     txt_file_list : list or array
         A list where each indice is the string of the pathname to the txt file
-        you wish to extract data from
-
-    fits_file_list : list or array
-        A list where each indice is the string of the pathname to the fits file
         you wish to extract data from
 
     bin_num : integer
@@ -1605,7 +904,7 @@ def mean_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
         A list of mean error values across the values of wavelength
     """
     all_wavelength, all_flux, all_Q, all_U, all_err = get_all_QU(
-        txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
+        txt_file_list, bin_num, radial_velocity=radial_velocity)
     interp_flux = []
     interp_Q = []
     interp_U = []
@@ -1629,125 +928,30 @@ def mean_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
     mean_err = np.sqrt(np.sum(np.array(all_err)**2, axis=0) / len(all_err))
     return(all_wavelength[0], mean_flux, mean_Q, mean_U, mean_err)
 
+"""PFEW"""
 
-def mean_flux_pol_pos(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
-    """
-    Takes the files you give it and extracts wavelength, flux, % Polarization,
-    position angle, and error for each file. The mean of each wavelength
-    dependent value is then calculated for at each wavelength value across all
-    the observations.
+def pfew_line_fit(w,pflux):
+    lmask = np.where((w > 6400) & (w < 6475))
+    rmask = np.where((w > 6750) & (w < 6800))
+    left_point = pflux[lmask].mean()
+    right_point = pflux[rmask].mean()
+    rise = right_point - left_point
+    run = 337.7
+    m = rise/run
+    funct = lambda x: m*(x-6437.5)+left_point
+    return funct
 
-    Parameters
-    ----------
-    txt_file_list : list or array
-        A list where each indice is the string of the pathname to the txt file
-        you wish to extract data from
+def pfew_halpha(w,pol,flux):
+    pflux = pol*flux
+    continuum = pfew_line_fit(w,pflux)
+    subbed = pflux - continuum(w)
+    hmask = np.where((w>6540) & (w<6600))
+    pol = subbed[hmask]/flux[hmask]
+    hpol = np.mean(pol,axis=0)
+    return hpol
 
-    fits_file_list : list or array
-        A list where each indice is the string of the pathname to the fits file
-        you wish to extract data from
-
-    bin_num : integer
-        The number of bins you which to have. A higher number will mean smaller bins
-
-    radial_velocity : float
-        The radial velocity of the object you are observing. This is used to account
-        for the doppler shift in wavelength dependent data.
-
-    Returns
-    ----------
-    all_wavelength[0] : List
-        An array of wavelengths across which the other values can be compared
-
-    mean_flux : List
-        A list of mean flux values across the values of wavelength
-
-    mean_pol : List
-        A list of mean % polarization values across the values of wavelength
-
-    mean_pos : List
-        A list of mean postion angle values across the values of wavelength
-
-    mean_err : List
-        A list of mean error values across the values of wavelength
-    """
-    wavelength,mean_flux,q,u,mean_err = mean_flux_Q_U(txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
-    mean_pol,mean_pos = polarization(q,u)
-    return(wavelength, mean_flux, mean_pol, mean_pos, mean_err)
-
-
-
-def fpp_sub_mean(txt_file_list, fits_file_list, bin_num, radial_velocity=0):
-    """
-    Takes the files you give it and extracts wavelength, flux, % Polarization,
-    position angle, and error for each file. The mean value of the Stokes Q and
-    U parameters are subtracted from those values before calculating % Polarization
-    and position angle to give a somewhat "normalized" version of these
-    measurements. The median of each wavelength dependent value is then calculated
-    for at each wavelength value across all the observations.
-
-    Parameters
-    ----------
-    txt_file_list : list or array
-        A list where each indice is the string of the pathname to the txt file
-        you wish to extract data from
-
-    fits_file_list : list or array
-        A list where each indice is the string of the pathname to the fits file
-        you wish to extract data from
-
-    bin_num : integer
-        The number of bins you which to have. A higher number will mean smaller bins
-
-    radial_velocity : float
-        The radial velocity of the object you are observing. This is used to account
-        for the doppler shift in wavelength dependent data.
-
-    Returns
-    ----------
-    all_wavelength[0] : List
-        An array of wavelengths across which the other values can be compared
-
-    median_flux : List
-        A list of median flux values across the values of wavelength
-
-    median_pol : List
-        A list of median % polarization values across the values of wavelength
-
-    median_pos : List
-        A list of median postion angle values across the values of wavelength
-
-    median_err : List
-        A list of median error values across the values of wavelength
-    """
-    all_wavelength, all_flux, all_Q, all_U, all_err = get_all_QU(
-        txt_file_list, fits_file_list, bin_num, radial_velocity=radial_velocity)
-    all_Q = sub_mean(all_Q)
-    all_U = sub_mean(all_U)
-    all_pol, all_pos = [], []
-    for q, u in zip(all_Q, all_U):
-        pol, pos = polarization(q, u)
-        all_pol.append(pol)
-        all_pos.append(pos)
-    interp_flux = []
-    interp_pol = []
-    interp_pos = []
-    interp_err = []
-    for i in range(1, len(all_wavelength)):
-        interpolated_flux = np.interp(
-            all_wavelength[0], all_wavelength[i], all_flux[i])
-        interp_flux.append(interpolated_flux)
-        interpolated_pol = np.interp(
-            all_wavelength[0], all_wavelength[i], all_pol[i])
-        interp_pol.append(interpolated_pol)
-        interpolated_pos = np.interp(
-            all_wavelength[0], all_wavelength[i], all_pos[i])
-        interp_pos.append(interpolated_pos)
-        interpolated_err = np.interp(
-            all_wavelength[0], all_wavelength[i], all_err[i])
-        interp_err.append(interpolated_err)
-    median_flux = np.median(np.array(interp_flux), axis=0)
-    median_pol = np.median(np.array(interp_pol), axis=0)
-    median_pos = np.median(np.array(interp_pos), axis=0)
-    median_err = error_of_median(all_err)
-    return(all_wavelength[0], median_flux, median_pol, median_pos, median_err)
+def pfew(dfs):
+    qs = [pfew_halpha(df.Wavelength.values,df.Q.values,df.Flux.values)    for df in dfs]
+    us = [pfew_halpha(df.Wavelength.values,df.U.values,df.Flux.values)    for df in dfs]
+    pol, pos = polarization(qs,us)
+    return qs,us,pol,pos

@@ -6,7 +6,7 @@ import os
 import astropy.coordinates as coord
 from astropy.io import fits, ascii
 from astropy.table import Table, Column
-#import P_Cyg as pc
+import P_Cyg as pc
 import scipy.stats
 
 #Only run this part if you need to remake the table
@@ -89,7 +89,7 @@ def pol_line(ra, dec, pol, pa, rastretch=1, decstretch=1, color='b'):
 
 
 ism = ascii.read("C:/Users/Keyan/Desktop/Science/Data/P-Cygni/Data/ISM_stars/ISM_stars.dat", delimiter = ':')
-print(ism)
+
 pdist = 1700
 distcut = 1000000
 
