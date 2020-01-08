@@ -39,7 +39,7 @@ class Ellipse(object):
                                   self.g2D.theta.value)
         self.stdq = np.sqrt(np.var(self.q))
         self.stdu = np.sqrt(np.var(self.u))
-        #self.r = (1/self.q.size)*np.sum([(Q-self.muq)*(U-self.muu)    for Q,U in zip(self.q,self.u)])/(self.stdu*self.stdq)
+        self.theta = np.rad2deg(self.g2D.theta.value)
         self.r,self.p = pearsonr(self.q,self.u)
         self.L = 2*self.stdq*self.stdu*np.sqrt(1-self.r**2)/(self.stdq**2+self.stdu**2)
         self.sig = self.L**(self.q.size-2)

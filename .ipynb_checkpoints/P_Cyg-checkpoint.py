@@ -437,8 +437,8 @@ def polarization(Q, U):
     position_angle : numpy array
         An array of position angles
     """
-    Q, U = np.array(np.absolute(Q)), np.array(np.absolute(U))
-    polarization = np.sqrt(Q**2 + U**2)
+    Q, U = np.array(Q), np.array(U)
+    polarization = np.hypot(Q, U)
     position_angle = np.degrees(np.arctan2(U, Q))/2
     return(polarization, position_angle)
 
